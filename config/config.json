@@ -1,0 +1,34 @@
+{
+  "development": {
+   "username": "reviveph_userserverdb",
+    "password": "bfYxB%uw~oPI",
+    "database": "reviveph_developmentDB",
+    "host": "localhost",
+    "dialect": "mysql",
+    "dialectOptions": {
+        "ssl": false
+    },
+    "timezone": "+10:00", 
+    "logging": false
+  },
+  "test": {
+     "username": "reviveph_userserverdb",
+    "password": "bfYxB%uw~oPI",
+    "database": "reviveph_developmentDB",
+    "host": "localhost",
+    "dialect": "mysql",
+    "logging": false
+  },
+  "production": {
+   "username": "reviveph_userserverdb",
+    "password": "bfYxB%uw~oPI",
+    "database": "reviveph_developmentDB",
+    "host": "localhost",
+    "dialect": "mysql",
+    "dialectOptions": {
+        "ssl": false
+    },
+    "timezone": "+10:00", 
+    "logging": false
+  }
+}
