@@ -63,8 +63,8 @@ router.post('/mass-delete-logs/', staffLogController.massDeleteLogs);
 router.get('/projects', projectController.getAllprojects);
 router.get('/my-projects', projectController.getProjectByLoggedInUser)
 router.get('/project/:id', projectController.getProjectById);
-router.post('/create-project', projectController.createProject);
-router.put('/update-project/:id', projectController.updateProject);
+router.post('/create-project', upload.array('resource_media'), projectController.createProject);
+router.put('/update-project/:id', upload.array('resource_media'), projectController.updateProject);
 router.delete('/delete-project/:id', projectController.deleteProject);
 
 module.exports = router;

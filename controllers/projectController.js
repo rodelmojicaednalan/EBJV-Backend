@@ -13,7 +13,7 @@ const getProjectByLoggedInUser = async (req, res) => {
     try{
         const userId = req.user.id;
         const currentProjects = await projects.findAll({
-            where: {userId},
+            where: {user_id: userId},
             order: [['createdAt', 'DESC']],
             include: [
                 {
