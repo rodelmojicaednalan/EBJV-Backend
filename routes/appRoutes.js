@@ -1,17 +1,21 @@
 const express = require('express');
+const cors = require('cors');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const roleController = require('../controllers/roleController'); 
-const {permission , can}= require('../middleware/permissionMiddleware');
+const roleController = require('../controllers/roleController');
+const {
+  permission,
+  can,
+} = require('../middleware/permissionMiddleware');
 const permissionController = require('../controllers/permissionController');
 const userRoleController = require('../controllers/userRoleController');
 const rolePermissionController = require('../controllers/rolePermissionController');
 const projectController = require('../controllers/projectController');
 const staffLogController = require('../controllers/staffLogController');
 
-const upload = require ('../utils/multerConfig');
+const upload = require('../utils/multerConfig');
 
-const authorize = require('../middleware/authorizationMiddleware'); 
+const authorize = require('../middleware/authorizationMiddleware');
 router.use(authorize);
 const permit = require('../middleware/permissionMiddleware');
 
@@ -19,7 +23,7 @@ const permit = require('../middleware/permissionMiddleware');
 router.get('/users', userController.getUsers);
 router.get('/user/:id', userController.getUserById);
 router.get('/user', userController.getCurrentUser);
-router.post('/addUser',  userController.addUser);
+router.post('/addUser', userController.addUser);
 router.post('/login', userController.login);
 router.post('/logout', userController.logout);
 router.post('/refresh', userController.refresh);
@@ -27,7 +31,10 @@ router.put('/update-user/:id', userController.updateUser);
 router.delete('/delete-user/:id', userController.deleteUser);
 router.put('/update-profile', userController.updateProfile);
 router.post('/reset-password', userController.resetPassword);
-router.post('/confirm-reset-password', userController.confirmResetPassword);
+router.post(
+  '/confirm-reset-password',
+  userController.confirmResetPassword
+);
 
 // CRUD Routes for Role
 router.get('/roles', roleController.getRoles);
@@ -39,20 +46,41 @@ router.delete('/delete-role/:id', roleController.deleteRole);
 // CRUD Routes for Permissions
 router.get('/permissions', permissionController.getPermissions);
 router.get('/permission/:id', permissionController.getPermissionById);
-router.post('/create-permission', permissionController.createPermission);
+router.post(
+  '/create-permission',
+  permissionController.createPermission
+);
 //router.put('/update-permission/:id', permissionController.updatePermission);
 //router.delete('/delete-permission/:id', permissionController.deletePermission);
 
 // CRUD Routes for Role Permissions
-router.get('/rolePermissions', rolePermissionController.getRolePermission);
-router.get('/rolePermission/:id', rolePermissionController.getRolePermissionById);
-router.post('/create-rolePermission', rolePermissionController.createRolePermission);
-router.put('/update-rolePermission/:id', rolePermissionController.updateRolePermission);
-router.delete('/delete-rolePermission/:id', rolePermissionController.deleteRolePermission);
+router.get(
+  '/rolePermissions',
+  rolePermissionController.getRolePermission
+);
+router.get(
+  '/rolePermission/:id',
+  rolePermissionController.getRolePermissionById
+);
+router.post(
+  '/create-rolePermission',
+  rolePermissionController.createRolePermission
+);
+router.put(
+  '/update-rolePermission/:id',
+  rolePermissionController.updateRolePermission
+);
+router.delete(
+  '/delete-rolePermission/:id',
+  rolePermissionController.deleteRolePermission
+);
 
 // CRUD Routes for User Roles
 router.get('/userRoles', userRoleController.getUserRoles);
-router.delete('/delete-userRole/:id', userRoleController.deleteUserRole);
+router.delete(
+  '/delete-userRole/:id',
+  userRoleController.deleteUserRole
+);
 
 // Staff Log Route
 router.get('/staffLogs', staffLogController.getAllStaffLogs);
@@ -61,11 +89,50 @@ router.post('/mass-delete-logs/', staffLogController.massDeleteLogs);
 
 // Project Routes
 router.get('/projects', projectController.getAllprojects);
-router.get('/my-projects', projectController.getProjectByLoggedInUser)
+router.get(
+  '/my-projects',
+  projectController.getProjectByLoggedInUser
+);
 router.get('/project/:id', projectController.getProjectById);
-router.post('/create-project', upload.array('resource_media'), projectController.createProject);
-router.put('/update-project/:id', upload.array('resource_media'), projectController.updateProject);
+router.post(
+  '/create-project',
+  upload.array('resource_media'),
+  projectController.createProject
+);
+router.put(
+  '/update-project/:id',
+  upload.array('resource_media'),
+  projectController.updateProject
+);
 router.delete('/delete-project/:id', projectController.deleteProject);
 
-module.exports = router;
+// // Upload route
+// router.get(
+//   '/uploads',
+//   (req, res, next) => {
+//     cors();
+//     next();
+//   },
+//   async function (req, res) {
+//     try {
+//       const apiUrl = `/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/`;
+//       const headers = {
+//         Accept: 'application/json',
+//         'Content-Type': 'application/json',
+//       };
+//       const apiResponse = await fetch(apiUrl, { headers });
 
+//       if (!apiResponse.ok) {
+//         throw new Error(`HTTP error! Status: ${apiResponse.status}`);
+//       }
+
+//       const data = await apiResponse.json();
+//       res.status(200).send({ data });
+//     } catch (error) {
+//       console.error('Error:', error.message);
+//       res.status(500).json({ error: 'Something went wrong.' });
+//     }
+//   }
+// );
+
+module.exports = router;

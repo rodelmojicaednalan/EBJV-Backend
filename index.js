@@ -5,25 +5,39 @@ const path = require('path');
 const loadDbPermission = require('./middleware/loadUserPermissionMiddleware');
 const appRoutes = require('./routes/appRoutes');
 const db = require('./models');
+const helmet = require('helmet');
 
 const app = express();
 
 require('dotenv').config();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
-app.options('*', cors());
-app.use(cors({ 
-    /*origin: 'https://revivepharmacyportal.com.au/',*/
-    credentials: true
-}));
+// app.options('*', cors());
+app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
 app.use(bodyParser.json());
 app.use(loadDbPermission);
-app.use('/api', appRoutes);
-app.use('/uploads', express.static(path.join('/home/reviveph/staging.server.revivepharmacyportal.com.au/', '/uploads')));
+app.use(cors());
 
-    app.get('/', function (req, res) {
-        const htmlResponse = `
+app.use('/api', appRoutes);
+
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    console.log('test');
+    next();
+  },
+  express.static(
+    path.join(
+      '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
+      '/uploads'
+    )
+  )
+);
+
+app.get('/', function (req, res) {
+  const htmlResponse = `
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -75,8 +89,7 @@ app.use('/uploads', express.static(path.join('/home/reviveph/staging.server.revi
             </body>
             </html>
         `;
-        res.send(htmlResponse);
-    });
+  res.send(htmlResponse);
+});
 
-app.listen(PORT)
-
+app.listen(PORT, () => console.log(`Listening on port: ${PORT}`));
