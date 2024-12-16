@@ -10,15 +10,6 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      project_name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true
-      },
-      project_address: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
       user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -27,14 +18,58 @@ module.exports = {
             key: 'id'
         }
       },
-      project_status: {
-        type: Sequelize.ENUM('Active', 'Inactive'),
+      project_name: {
+        type: Sequelize.STRING,
         allowNull: false,
-        defaultValue: 'Active'
+        unique: true
+      },
+      project_location: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
       project_file: {
         type: Sequelize.JSON,
         allowNull: true,
+      },
+      project_thumbnail: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      project_size: {
+        type: Sequelize.STRING,
+        allowNull: true 
+      },
+      project_folders: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      project_file_count: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      project_user_count: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      start_date: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      end_date: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      project_description: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      project_boundary: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      project_crs: {
+        type: Sequelize.STRING,
+        allowNull: true
       },
       createdAt: {
         allowNull: false,

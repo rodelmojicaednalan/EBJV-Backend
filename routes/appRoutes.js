@@ -89,23 +89,16 @@ router.post('/mass-delete-logs/', staffLogController.massDeleteLogs);
 
 // Project Routes
 router.get('/projects', projectController.getAllprojects);
-router.get(
-  '/my-projects',
-  projectController.getProjectByLoggedInUser
-);
+router.get('/my-projects',projectController.getProjectByLoggedInUser);
 router.get('/project/:id', projectController.getProjectById);
-router.post(
-  '/create-project',
-  upload.array('resource_media'),
-  projectController.createProject
-);
-router.put(
-  '/update-project/:id',
-  upload.array('resource_media'),
-  projectController.updateProject
-);
+router.post('/create-project', upload.array('project_file'), projectController.createProject);
+router.put('/update-project/:id', upload.array('project_file'), projectController.updateProject);
 router.delete('/delete-project/:id', projectController.deleteProject);
 
+router.get('/project-activities/:id', projectController.getProjectActivity);
+router.get('/project-topics/:id', projectController.getProjectTopics);
+router.get('/project-contributors/:projectId', projectController.getContributors);
+router.get('/uploads/:filename', projectController.getFiles);
 // // Upload route
 // router.get(
 //   '/uploads',

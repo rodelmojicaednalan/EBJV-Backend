@@ -9,8 +9,28 @@ module.exports = (sequelize, DataTypes) => {
         through: models.users_roles,
         foreignKey: 'user_id',
       });
+
+      User.belongsToMany(models.groups, {
+        through: models.users_groups,
+        foreignKey: 'user_id',
+      });
+
+      User.belongsToMany(models.projects, {
+        through: models.users_projects,
+        as: 'collaboratedProjects',
+        foreignKey: 'user_id',
+      });
       
        User.hasMany(models.projects, {
+         as: 'ownedProjects',
+        foreignKey: 'user_id'
+      });
+
+      User.hasMany(models.project_activities, {
+        foreignKey: 'user_id'
+      });
+      
+      User.hasMany(models.staff_logs, {
         foreignKey: 'user_id'
       });
       
@@ -33,6 +53,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       },
+    employer: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    status: {
+      type: DataTypes.ENUM('Active', 'Inactive'),
+      allowNull: false,
+      defaultValue: 'Active'
+    },
     username: {
       type: DataTypes.STRING,
       allowNull: false,

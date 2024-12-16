@@ -18,6 +18,7 @@ const getUsers = async (req, res) => {
         },
         {
           model: projects,
+          as: 'ownedProjects',
           attributes: ['id', 'project_name']
         },
       ],
@@ -40,6 +41,7 @@ const getUserById = async (req, res) => {
         },
         {
           model: projects,
+          as: 'ownedProjects',
           attributes: ['id', 'project_name']
         },
  
@@ -66,6 +68,7 @@ const getCurrentUser = async (req, res) => {
       include: [
         {
           model: projects,
+          as: 'ownedProjects',
           attributes: ['id', 'project_name']
         },
         {
@@ -92,7 +95,7 @@ const getCurrentUser = async (req, res) => {
         username: user.username,
         email: user.email,
         roles: rolesWithPermissions,
-        projects: user.projects.map(project => project.project_name) || []
+        projects: user.ownedProjects.map(project => project.project_name) || []
       };
 
       res.status(200).json(response);

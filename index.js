@@ -22,20 +22,6 @@ app.use(cors());
 
 app.use('/api', appRoutes);
 
-app.use(
-  '/uploads',
-  (req, res, next) => {
-    console.log('test');
-    next();
-  },
-  express.static(
-    path.join(
-      '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
-      '/uploads'
-    )
-  )
-);
-
 app.get('/', function (req, res) {
   const htmlResponse = `
             <!DOCTYPE html>
