@@ -1,4 +1,6 @@
-const {projects, users, project_activities, project_views, project_releases, project_topics, users_projects, staff_logs, roles} = require('../models');
+const {projects, users, project_activities, project_views, 
+    project_releases, project_topics, users_projects, staff_logs, roles,
+    project_toDos} = require('../models');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
@@ -13,7 +15,8 @@ const getAllprojects = async (req, res) => {
                     attributes: ['first_name', 'last_name']
                 }
             ],
-            attributes: ['id', 'project_name', 'project_location', 'project_file']
+            attributes: ['id', 'project_name', 'project_location', 'project_file'],
+            order: [['updatedAt', 'DESC']]
         });
         res.status(200).json({data:allprojects});
     } catch (error) {
@@ -26,7 +29,7 @@ const getProjectByLoggedInUser = async (req, res) => {
         const userId = req.user.id;
         const currentProjects = await projects.findAll({
             where: {user_id: userId},
-            order: [['createdAt', 'DESC']],
+            order: [['updatedAt', 'DESC']],
             include: [
                 {
                 model: users,
@@ -198,6 +201,53 @@ const getProjectTopics = async (req, res) => {
     }
 };
 
+const getProjectToDos = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const project = await projects.findByPk(id, {
+            include: [
+                {
+                    model: users,
+                    as: 'owner',
+                    attributes: ['id', 'first_name', 'last_name']
+                },
+                {
+                    model: project_toDos
+                }
+            ]
+        });
+
+        if (project) {
+            const ownerId = project.owner.id; // Owner's ID
+
+            const projectToDo = project.project_toDos.map((toDo) => {
+                return {
+                    id: toDo.id,
+                    belongsTo: toDo.project_id,
+                    is_owner: toDo.user_id === ownerId, // Check if view.user_id matches owner.id
+                    toDoTitle: toDo.title,
+                    toDoAssignee: toDo.assignee,
+                    toDoDesc: toDo.description,
+                    toDoStatus: toDo.status,
+                    toDoPriority: toDo.priority,
+                    toDoStatus: toDo.status,
+                    toDoAttachments: toDo.attachments,
+                    dateCreated: toDo.createdAt,
+                    lastUpdated: toDo.updatedAt
+                };
+            });
+            // Send the response with files and project views
+            res.status(200).json({
+                ...project.toJSON(),
+                project_toDos: projectToDo
+            });
+        } else {
+            res.status(404).json({ error: 'Project Topic not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 const createProject = async (req, res) => {
     const { project_name, project_location } = req.body;
@@ -433,7 +483,8 @@ module.exports = {
     getFiles,
     getProjectActivity,
     getProjectTopics,
-    getContributors
+    getContributors,
+    getProjectToDos
     
 };
 
