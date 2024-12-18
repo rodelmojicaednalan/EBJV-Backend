@@ -53,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     release_note: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
     assigned_tags: {
       type: DataTypes.JSON,

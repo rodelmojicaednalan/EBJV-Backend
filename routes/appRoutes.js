@@ -103,6 +103,12 @@ router.get('/project-toDo/:id', projectController.getProjectToDos);
 router.post('/upload-ifc-files/:id', upload.array('project_file', 10), projectController.uploadFile)
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
 
+router.post('/create-release/:projectId', projectController.createRelease);
+router.delete('/delete-release/:projectId/:id', projectController.deleteRelease);
+
+router.post('/create-topic/:projectId', projectController.createTopic);
+router.delete('/delete-topic/:projectId/:id', projectController.deleteTopic);
+
 router.get('/uploads/:filename', projectController.getFiles);
 // // Upload route
 // router.get(

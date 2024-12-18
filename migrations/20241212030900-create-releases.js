@@ -49,7 +49,7 @@ module.exports = {
         },
         release_note: {
             type: Sequelize.STRING,
-            allowNull: false,
+            allowNull: true,
         },
         assigned_tags: {
           type: Sequelize.JSON,

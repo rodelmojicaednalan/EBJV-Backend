@@ -4,6 +4,7 @@ const {projects, users, project_activities, project_views,
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
+//const e = require('cors');
 
 const getAllprojects = async (req, res) => {
     try {
@@ -511,6 +512,7 @@ const deleteProject = async (req, res) => {
   const deleteFile = async (req, res) => {
     const projectId = req.params.projectId;
     const fileName = req.params.id; // Pass the file name as a param
+    const userId = req.user.id; 
     try {
         const project = await projects.findByPk(projectId);
         if (!project) {
@@ -527,6 +529,14 @@ const deleteProject = async (req, res) => {
         await project.update({ project_file: updatedFiles });
         
         deleteFiles([fileName]);
+
+        await project_activities.create({
+            project_id: project.id,
+            user_id: userId,
+            activity_type: "File Deleted",
+            description: `Deleted file: `,
+            related_data: `${fileName}`
+          });
   
       res.status(200).json({ message: "File removed successfully" });
     } catch (error) {
@@ -535,22 +545,158 @@ const deleteProject = async (req, res) => {
     }
   };
 
+const createRelease = async(req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const { releaseName, dueDate, recipients, releaseNote } = req.body;
+    try{
+        const project = await projects.findByPk(projectId);
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+       const release =  await project_releases.create({
+            project_id: project.id,
+            user_id: userId,
+            release_name: releaseName,
+            due_date: dueDate, 
+            recipients: recipients,
+            release_note: releaseNote
+        })
 
+        if (release) {
+            await project_activities.create({
+                project_id: project.id,
+                user_id: userId,
+                activity_type: "Release Created",
+                description: `Added Release: `,
+                related_data: `${release.release_name}`
+              });
+        }
+
+    
+    res.status(200).json({message: 'Successfully created project release'});
+    } catch (error){
+    console.error("Error creating project release");
+    res.status(500).json({error: error.message});
+    }
+};
+
+const deleteRelease = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const id = req.params.id
+    try{
+        const project = await projects.findByPk(projectId);
+        const release = await project_releases.findByPk(id);
+      
+        if (!release) {
+            return res.status(404).json({ error: 'Release not found' });
+        }
+
+    const deletedRelease =  await project_releases.destroy({ where: { id } });
+    await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Release Deleted",
+        description: `Deleted Release: `,
+        related_data: `${release.release_name}`
+      });
+    if (deletedRelease){
+        res.status(200).json({message: 'Release deleted successfully'})     
+    } else {
+        res.status(404).json({error: 'Failed to delete release '})   
+    }
+   
+    } catch (error){
+    res.status(500).json({error: "Error processing release to delete"})
+    }
+}
+
+const createTopic = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const {topicName, topicDesc, topicType, assigneeList, topicStatus, topicPrio, topicDue} = req.body;
+    try{
+        const project = await projects.findByPk(projectId)
+        if (!project){
+            res.status(404).json({message: "Project not found"})
+        }
+
+        const topic = await project_topics.create({
+            project_id: project.id,
+            user_id: userId,
+            topic_name: topicName,
+            topic_description: topicDesc,
+            assignee: assigneeList,
+            topic_type: topicType,
+            topic_status: topicStatus,
+            topic_priority: topicPrio,
+            topic_dueDate: topicDue
+        })
+
+        if (topic) {
+            await project_activities.create({
+                project_id: project.id,
+                user_id: userId,
+                activity_type: "Topic Created",
+                description: `Created Topic: `,
+                related_data: `${topicName}`
+            })
+        }
+ 
+    res.status(200).json({message: 'Topic Created'});
+    } catch (error) {
+    console.error("Error creating");
+    res.status(500).json({error: error.message});
+    }
+};
+
+const deleteTopic = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const id = req.params.id
+    try{
+        const project = await projects.findByPk(projectId)
+        if (!project){
+            res.status(404).json({message: "Project not found"})
+        }
+
+        const topic = await project_topics.findByPk(id)
+        if (!topic){
+            res.status(404).json({message: 'Topic not found'});
+        }
+
+        const deletedTopic = await project_topics.destroy({ where: { id } });
+        await project_activities.create({
+            project_id: project.id,
+            user_id: userId,
+            activity_type: "Topic Deleted",
+            description: `Deleted Release: `,
+            related_data: `${topic.topic_name}`
+          });
+
+        if (deletedTopic){
+            res.status(200).json({message: 'Release deleted successfully'})     
+        } else {
+            res.status(404).json({error: 'Failed to delete release '})   
+        }
+        } catch (error) {
+        console.error("Error processing");
+        res.status(500).json({error: error.message});
+        }
+
+};
 
 module.exports = {
-    getAllprojects,
-    getProjectById,
-    createProject,
-    updateProject,
-    deleteProject,
+    getAllprojects, getProjectById,
+    createProject, updateProject, deleteProject,
     getProjectByLoggedInUser,
     getFiles,
-    getProjectActivity,
-    getProjectTopics,
-    getContributors,
-    getProjectToDos,
-    uploadFile,
-    deleteFile
+    getProjectActivity, getProjectTopics,
+    getContributors, getProjectToDos,
+    uploadFile, deleteFile,
+    createRelease, deleteRelease,
+    createTopic, deleteTopic
     
 };
 

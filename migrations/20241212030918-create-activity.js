@@ -31,7 +31,9 @@ module.exports = {
           onUpdate: 'CASCADE'
         },
         activity_type: {
-          type: Sequelize.ENUM('Project Created', 'File Uploaded', 'Comment Added', 'Status Changed'),
+          type: Sequelize.ENUM('Project Created', 'File Uploaded', 'File Deleted', 
+          'Release Created', 'Release Deleted', 'Topic Created', 'Topic Deleted',
+          'Comment Added', 'Status Changed'),
           allowNull: false,
         },
         description: {

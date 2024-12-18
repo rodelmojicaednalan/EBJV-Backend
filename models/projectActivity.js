@@ -31,7 +31,9 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     activity_type: {
-      type: DataTypes.ENUM('Project Created', 'File Uploaded', 'Comment Added', 'Status Changed'),
+      type: DataTypes.ENUM('Project Created', 'File Uploaded', 'File Deleted', 
+      'Release Created', 'Release Deleted', 'Topic Created', 'Topic Deleted',
+      'Comment Added', 'Status Changed'),
       allowNull: false,
     },
     description: {
