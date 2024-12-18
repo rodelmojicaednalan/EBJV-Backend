@@ -125,7 +125,7 @@ const getProjectActivity = async (req, res) => {
                 {
                     model: project_activities
                 }
-            ]
+            ],
         });
 
         if (project) {
@@ -137,6 +137,7 @@ const getProjectActivity = async (req, res) => {
                     activityDescription: activity.description,
                     relatedData: activity.related_data,
                     is_owner: activity.user_id === ownerId, // Check if view.user_id matches owner.id
+                    lastModified: activity.updatedAt
                 };
             });
             // Send the response with files and project views
@@ -268,6 +269,7 @@ const createProject = async (req, res) => {
                 user_id: newProject.user_id,
                 activity_type: 'Project Created',
                 description: 'Created the project',
+                related_data: newProject.project_file
               });
         }
 
@@ -337,7 +339,7 @@ const deleteProject = async (req, res) => {
       const project = await projects.findByPk(id);
       
       if (!project) {
-        return res.status(404).json({ error: 'project not found' });
+        return res.status(404).json({ error: 'Project not found' });
       }
       
       // Parse the project media files
@@ -355,9 +357,9 @@ const deleteProject = async (req, res) => {
       // Now, delete the project from the database
       const deleted = await projects.destroy({ where: { id } });
       if (deleted) {
-        res.status(200).json({ message: `project deleted with ID: ${id}` });
+        res.status(200).json({ message: `Project deleted with ID: ${id}` });
       } else {
-        res.status(404).json({ error: 'project not found' });
+        res.status(404).json({ error: 'Failed to delete project' });
       }
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -473,6 +475,68 @@ const deleteProject = async (req, res) => {
     }
   };
 
+  const uploadFile = async (req,res) => {
+    try{
+        const userId = req.user.id;
+        const project = await projects.findByPk(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({ error: "Project not found" });
+          }
+
+        const currentFiles = project.project_file || [];
+        const newFiles = req.files ? req.files.map((file) => file.filename) : [];
+        const updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
+
+        project.project_file = updatedFiles.length > 0 ? updatedFiles : null;
+
+        await project.save();
+
+        if(newFiles.length > 0){
+            await project_activities.create({
+                project_id: project.id,
+                user_id: userId,
+                activity_type: 'File Uploaded',
+                description: `Uploaded ${newFiles.length} file(s): `,
+                related_data: `${newFiles.join(", ")}`
+              });
+        }
+    res.status(200).json({message: "Upload successful"})
+    } catch(error){
+        console.error("File upload error:", error);
+    res.status(500).json({error: "Upload Failed", details: error.message})
+    }
+  };
+
+  const deleteFile = async (req, res) => {
+    const projectId = req.params.projectId;
+    const fileName = req.params.id; // Pass the file name as a param
+    try {
+        const project = await projects.findByPk(projectId);
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+    
+        let projectFiles = project.project_file || [];
+        if (typeof projectFiles === "string") {
+          projectFiles = JSON.parse(projectFiles); 
+        }
+    
+        const updatedFiles = projectFiles.filter((file) => file !== fileName);
+    
+        await project.update({ project_file: updatedFiles });
+        
+        deleteFiles([fileName]);
+  
+      res.status(200).json({ message: "File removed successfully" });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      res.status(500).json({ error: "File removal failed" });
+    }
+  };
+
+
+
 module.exports = {
     getAllprojects,
     getProjectById,
@@ -484,7 +548,9 @@ module.exports = {
     getProjectActivity,
     getProjectTopics,
     getContributors,
-    getProjectToDos
+    getProjectToDos,
+    uploadFile,
+    deleteFile
     
 };
 

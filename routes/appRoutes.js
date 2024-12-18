@@ -99,6 +99,10 @@ router.get('/project-activities/:id', projectController.getProjectActivity);
 router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
+
+router.post('/upload-ifc-files/:id', upload.array('project_file', 10), projectController.uploadFile)
+router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
+
 router.get('/uploads/:filename', projectController.getFiles);
 // // Upload route
 // router.get(
