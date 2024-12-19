@@ -251,6 +251,12 @@ const getProjectToDos = async (req, res) => {
     }
 };
 
+const createProjectTodo = async(req, res) => {
+
+    res.status(201).json(req.body);
+
+}
+
 const createProject = async (req, res) => {
     const { project_name, project_location } = req.body;
     const userId = req.user.id;
@@ -696,7 +702,7 @@ module.exports = {
     getContributors, getProjectToDos,
     uploadFile, deleteFile,
     createRelease, deleteRelease,
-    createTopic, deleteTopic
+    createTopic, deleteTopic, createProjectTodo
     
 };
 
