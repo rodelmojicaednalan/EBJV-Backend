@@ -251,12 +251,6 @@ const getProjectToDos = async (req, res) => {
     }
 };
 
-const createProjectTodo = async(req, res) => {
-
-    res.status(201).json(req.body);
-
-}
-
 const createProject = async (req, res) => {
     const { project_name, project_location } = req.body;
     const userId = req.user.id;
@@ -693,6 +687,85 @@ const deleteTopic = async (req, res) => {
 
 };
 
+const createToDo = async(req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const { todoTitle, todoDesc, todoAssignee, todoPriority, todoDueDate, todoType, todoAttachments } = req.body;
+    try{
+        const project = await projects.findByPk(projectId);
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+       const toDo =  await project_toDos.create({
+            project_id: project.id,
+            user_id: userId,
+            title: todoTitle,
+            assignee: todoAssignee, 
+            description: todoDesc,
+            priority: todoPriority,
+            due_date: todoDueDate,
+            type: todoType,
+            attachments: todoAttachments || null
+        })
+
+        if (toDo) {
+            await project_activities.create({
+                project_id: project.id,
+                user_id: userId,
+                activity_type: "To Do Created",
+                description: `Added To Do: `,
+                related_data: `${toDo.title}`
+              });
+        }
+
+    
+    res.status(200).json({message: 'Successfully created project to do'});
+    } catch (error){
+    console.error("Error creating project to do");
+    res.status(500).json({error: error.message});
+    }
+};
+
+const updateToDo = async (req, res) => {
+    try {
+
+    res.status(200).json({message: 'Update to do success'})
+    } catch (error){
+    res.status(500).json({error: error.message})
+    }
+}
+
+const deleteToDo = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const id = req.params.id
+    try{
+        const project = await projects.findByPk(projectId);
+        const todo = await project_toDos.findByPk(id);
+      
+        if (!todo) {
+            return res.status(404).json({ error: 'Release not found' });
+        }
+
+    const deletedToDo =  await project_toDos.destroy({ where: { id } });
+    await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "To Do Deleted",
+        description: `Deleted To Do: `,
+        related_data: `${todo.title}`
+      });
+    if (deletedToDo){
+        res.status(200).json({message: 'To Do deleted successfully'})     
+    } else {
+        res.status(404).json({error: 'Failed to delete to do '})   
+    }
+   
+    } catch (error){
+    res.status(500).json({error: "Error processing to do to delete"})
+    }
+}
+
 module.exports = {
     getAllprojects, getProjectById,
     createProject, updateProject, deleteProject,
@@ -702,7 +775,8 @@ module.exports = {
     getContributors, getProjectToDos,
     uploadFile, deleteFile,
     createRelease, deleteRelease,
-    createTopic, deleteTopic, createProjectTodo
+    createTopic, deleteTopic,
+    createToDo, updateToDo, deleteToDo
     
 };
 

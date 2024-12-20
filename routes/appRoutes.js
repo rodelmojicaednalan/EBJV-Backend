@@ -99,7 +99,6 @@ router.get('/project-activities/:id', projectController.getProjectActivity);
 router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
-router.post('/project-ToDo/:id/add-todo', projectController.createProjectTodo);
 
 router.post('/upload-ifc-files/:id', upload.array('project_file', 10), projectController.uploadFile)
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
@@ -109,6 +108,10 @@ router.delete('/delete-release/:projectId/:id', projectController.deleteRelease)
 
 router.post('/create-topic/:projectId', projectController.createTopic);
 router.delete('/delete-topic/:projectId/:id', projectController.deleteTopic);
+
+router.post('/create-todo/:projectId', projectController.createToDo);
+router.post('/update-todo/:projectId/:id', projectController.updateToDo);
+router.delete('/delete-todo/:projectId/:id', projectController.deleteToDo);
 
 router.get('/uploads/:filename', projectController.getFiles);
 

@@ -43,9 +43,18 @@ module.exports = {
             type: Sequelize.STRING,
             allowNull: false,
         },
+        due_date: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
+        type: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
         status: {
             type: Sequelize.STRING,
-            allowNull: false,
+            allowNull: true,
+            defaultValue: "New"
         },
         attachments: {
             type: Sequelize.JSON,

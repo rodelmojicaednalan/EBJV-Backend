@@ -47,9 +47,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    due_date: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     status: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
+        defaultValue: "New"
     },
     attachments: {
         type: DataTypes.JSON,
