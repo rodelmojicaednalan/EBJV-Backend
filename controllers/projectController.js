@@ -1,6 +1,6 @@
 const {projects, users, project_activities, project_views, 
     project_releases, project_topics, users_projects, staff_logs, roles,
-    project_toDos} = require('../models');
+    project_toDos, groups} = require('../models');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
@@ -67,8 +67,8 @@ const getProjectById = async (req, res) => {
 
         if (project) {
             // Parse the JSON array of file names
-            const files = project.project_file || []; // Assuming project_file is the column name
-            const uploadsDir = 'C:/Users/Admin/Documents/GitHub/EBJV-Backend/uploads';
+            const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
+            const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads';
 
             // Attach file sizes to each file
             const filesWithSizes = files.map((fileName) => {
@@ -325,7 +325,7 @@ const updateProject = async (req,res) => {
 
 const deleteFiles = (files) => {
     files.forEach(file => {
-        const filePath = path.join('C:/Users/Admin/Documents/GitHub/EBJV-Backend/uploads', file);
+        const filePath = path.join('/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads', file);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
@@ -344,7 +344,7 @@ const deleteProject = async (req, res) => {
       }
       
       // Parse the project media files
-      const mediaFiles = project.project_file || [];
+      const mediaFiles = project.project_file ? JSON.parse(project.project_file) : []; 
   
       // Delete the media files associated with the project
       if (mediaFiles.length > 0) {
@@ -371,7 +371,7 @@ const deleteProject = async (req, res) => {
     const filename = req.params.filename;
 
     const uploadsPath = path.join(
-      'C:/Users/Admin/Documents/GitHub/EBJV-Backend/',
+      '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
       'uploads'
     );
   
@@ -417,6 +417,17 @@ const deleteProject = async (req, res) => {
                 }
             ]
           },
+          {
+            model: groups,
+            attributes: ['id', 'group_name'],
+            include: [
+              {
+                model: users,
+                attributes: ['id', 'first_name', 'last_name'],
+                through: { model: users_groups, attributes: [] }, // Only fetch user-group relationship
+              },
+            ],
+          },
         ],
       });
   
@@ -426,6 +437,7 @@ const deleteProject = async (req, res) => {
   
       const collaborators = project.collaborators || [];
       const owner = project.owner ? [project.owner] : [];
+      const projectGroups = project.groups || [];
   
       // Combine owner and collaborators into one array
       const allUsers = [...owner, ...collaborators];
@@ -464,12 +476,23 @@ const deleteProject = async (req, res) => {
           last_login: lastLoginDate || 'No login record',
         };
       });
+
+      const formattedGroups = groups.map((group) => ({
+        id: group.id,
+        group_name: group.group_name,
+        members: group.users.map((user) => ({
+          id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+        })),
+      }));
   
       res.status(200).json({
         project_name: project.project_name,
         owner: `${project.owner.first_name} ${project.owner.last_name}`,
         contributors,
+        groups: formattedGroups
       });
+
     } catch (error) {
       console.error('Error fetching contributors:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -485,7 +508,7 @@ const deleteProject = async (req, res) => {
             return res.status(404).json({ error: "Project not found" });
           }
 
-        const currentFiles = project.project_file || [];
+        const currentFiles = project.project_file ? JSON.parse(project.project_file) : []; 
         const newFiles = req.files ? req.files.map((file) => file.filename) : [];
         const updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
 
@@ -519,7 +542,7 @@ const deleteProject = async (req, res) => {
           return res.status(404).json({ error: "Project not found" });
         }
     
-        let projectFiles = project.project_file || [];
+        let projectFiles = project.project_file ? JSON.parse(project.project_file) : []; 
         if (typeof projectFiles === "string") {
           projectFiles = JSON.parse(projectFiles); 
         }
@@ -764,7 +787,181 @@ const deleteToDo = async (req, res) => {
     } catch (error){
     res.status(500).json({error: "Error processing to do to delete"})
     }
-}
+};
+
+const createGroup = async(req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const { groupName  } = req.body;
+    try{
+        const project = await projects.findByPk(projectId);
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+       const group =  await groups.create({
+            project_id: project.id,
+            group_name: groupName
+        })
+
+        if (group) {
+            await project_activities.create({
+                project_id: project.id,
+                user_id: userId,
+                activity_type: "Created Group",
+                description: `Created Group: `,
+                related_data: `${groupName}`
+              });
+        }
+
+    
+    res.status(200).json({message: 'Successfully created group'});
+    } catch (error){
+    console.error("Error creating group");
+    res.status(500).json({error: error.message});
+    }
+};
+
+const deleteGroup = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const id = req.params.id
+    try{
+        const project = await projects.findByPk(projectId);
+        const group = await groups.findByPk(id);
+      
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+    const deletedGroup =  await groups.destroy({ where: { id } });
+    await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Group Deleted",
+        description: `Deleted Group: `,
+        related_data: `${group.group_name}`
+      });
+    if (deletedGroup){
+        res.status(200).json({message: 'Group deleted successfully'})     
+    } else {
+        res.status(404).json({error: 'Failed to delete group '})   
+    }
+   
+    } catch (error){
+    res.status(500).json({error: "Error processing group to delete"})
+    }
+};
+
+const renameGroup = async (req, res) => {
+    const projectId = req.params.projectId;
+    const userId = req.user.id; 
+    const id = req.params.id
+    const { groupName  } = req.body;
+    try {
+        const project = await projects.findByPk(projectId);
+        const group = await groups.findByPk(id);
+        if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+        }
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+      const [updated] = await groups.update({ group_name  }, { where: { id } });
+
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Group Renamed",
+        description: `Renamed group to: `,
+        related_data: `${groupName}`
+      });
+      if (updated) {
+        const renamedGroup = await groups.findByPk(id);
+        res.status(200).json(renamedGroup);
+      } else {
+        res.status(404).json({ error: 'Role not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+  const getGroupContributors = async (req, res) => {
+    try {
+      const { groupId } = req.params;
+  
+      // Fetch the group, including associated users
+      const group = await groups.findByPk(groupId, {
+        include: [
+          {
+            model: users,
+            attributes: ['id', 'first_name', 'last_name', 'employer', 'status'],
+            include: [
+              {
+                model: roles,
+                attributes: ['role_name'],
+                through: { attributes: [] }, // Exclude join table details
+              },
+            ],
+            through: { model: users_groups }, // Exclude join table details if not needed
+          },
+        ],
+      });
+  
+      if (!group) {
+        return res.status(404).json({ message: 'Group not found' });
+      }
+  
+      // Extract contributors (users)
+      const contributors = group.users || [];
+  
+      // Fetch last login for all contributors
+      const userIds = contributors.map((user) => user.id);
+  
+      const lastLogins = await staff_logs.findAll({
+        where: {
+          user_id: { [Op.in]: userIds },
+          action: 'login',
+        },
+        attributes: ['user_id', 'createdAt'],
+        order: [['createdAt', 'DESC']],
+      });
+  
+      // Map last login data for quick access
+      const lastLoginMap = {};
+      lastLogins.forEach((log) => {
+        lastLoginMap[log.user_id] = log.createdAt;
+      });
+  
+      // Adjust user statuses based on the last login date
+      const groupContributors = contributors.map((user) => {
+        const lastLoginDate = lastLoginMap[user.id];
+        const isInactive =
+          !lastLoginDate || new Date() - new Date(lastLoginDate) > 7 * 24 * 60 * 60 * 1000;
+        const roleNames = user.roles ? user.roles.map((role) => role.role_name) : [];
+  
+        return {
+          id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          employer: user.employer,
+          role: roleNames, // Include all roles as an array
+          status: isInactive ? 'Inactive' : user.status,
+          last_login: lastLoginDate || 'No login record',
+        };
+      });
+  
+      res.status(200).json({
+        group_name: group.group_name,
+        contributors: groupContributors,
+      });
+    } catch (error) {
+      console.error('Error fetching group contributors:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+  
+
 
 module.exports = {
     getAllprojects, getProjectById,
@@ -776,7 +973,8 @@ module.exports = {
     uploadFile, deleteFile,
     createRelease, deleteRelease,
     createTopic, deleteTopic,
-    createToDo, updateToDo, deleteToDo
+    createToDo, updateToDo, deleteToDo,
+    createGroup, deleteGroup, renameGroup, getGroupContributors
     
 };
 

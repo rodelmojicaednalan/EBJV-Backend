@@ -17,6 +17,8 @@ module.exports = {
           model: 'projects',
           key: 'id',
         },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       user_id: {
         type: Sequelize.INTEGER,
@@ -25,6 +27,8 @@ module.exports = {
           model: 'users',
           key: 'id',
         },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       topicSetting_type: {
           type: Sequelize.JSON,

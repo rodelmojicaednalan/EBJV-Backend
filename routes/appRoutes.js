@@ -113,36 +113,11 @@ router.post('/create-todo/:projectId', projectController.createToDo);
 router.post('/update-todo/:projectId/:id', projectController.updateToDo);
 router.delete('/delete-todo/:projectId/:id', projectController.deleteToDo);
 
+router.post('/create-group/:projectId', projectController.createGroup);
+router.put('/rename-group/:projectId/:id', projectController.renameGroup);
+router.delete('/delete-group/:projectId/:id', projectController.deleteGroup);
+router.get('/group-contributors/:projectId/:groupId', projectController.getGroupContributors);
+
 router.get('/uploads/:filename', projectController.getFiles);
-
-
-// // Upload route
-// router.get(
-//   '/uploads',
-//   (req, res, next) => {
-//     cors();
-//     next();
-//   },
-//   async function (req, res) {
-//     try {
-//       const apiUrl = `/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/`;
-//       const headers = {
-//         Accept: 'application/json',
-//         'Content-Type': 'application/json',
-//       };
-//       const apiResponse = await fetch(apiUrl, { headers });
-
-//       if (!apiResponse.ok) {
-//         throw new Error(`HTTP error! Status: ${apiResponse.status}`);
-//       }
-
-//       const data = await apiResponse.json();
-//       res.status(200).send({ data });
-//     } catch (error) {
-//       console.error('Error:', error.message);
-//       res.status(500).json({ error: 'Something went wrong.' });
-//     }
-//   }
-// );
 
 module.exports = router;
