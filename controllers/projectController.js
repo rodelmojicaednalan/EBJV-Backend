@@ -961,7 +961,80 @@ const renameGroup = async (req, res) => {
     }
   };
   
-
+  const inviteToProject = async (req, res) => {
+    const { projectId, id } = req.params; // projectId = project ID, id = group ID (optional)
+    const userId = req.user.id; // The user performing the invite
+    const { emails, groupName } = req.body; // Expecting an array of emails
+  
+    try {
+      // Validate the project
+      const project = await projects.findByPk(projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+  
+      // Validate emails in the users table
+      const usersList = await users.findAll({
+        where: { email: emails },
+        attributes: ["id", "email"], // Fetch only necessary fields
+      });
+  
+      if (usersList.length === 0) {
+        return res.status(404).json({ error: "No valid users found for the provided emails" });
+      }
+  
+      // Add users to the project via the users_projects table
+      const userProjectsData = usersList.map((user) => ({
+        project_id: project.id,
+        user_id: user.id,
+      }));
+  
+      await users_projects.bulkCreate(userProjectsData);
+  
+      // Optional: Add users to the group if groupName and group ID are provided
+      if (id && groupName) {
+        // Validate group by ID and name
+        const group = await groups.findOne({
+          where: { id, name: groupName },
+        });
+  
+        if (!group) {
+          return res.status(404).json({ error: "Group not found or name mismatch" });
+        }
+  
+        // Prepare and execute bulkCreate for users_groups
+        const userGroupsData = usersList.map((user) => ({
+          group_id: group.id,
+          user_id: user.id,
+        }));
+  
+        await users_groups.bulkCreate(userGroupsData);
+      }
+  
+      // Log the activity
+      const activityDescription = id && groupName
+        ? `Invited users to project and added to group: ${groupName}`
+        : `Invited users to project: ${project.name}`;
+  
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Invitation",
+        description: activityDescription,
+        related_data: `Emails: ${emails.join(", ")}`,
+      });
+  
+      res.status(200).json({
+        message: `Successfully invited users to project${id && groupName ? ` and added to group: ${groupName}` : ""}.`,
+        invitedUsers: usersList.map((user) => user.email),
+      });
+    } catch (error) {
+      console.error("Error inviting users to project:", error);
+      res.status(500).json({ error: error.message });
+    }
+  };
+  
+  
 
 module.exports = {
     getAllprojects, getProjectById,
@@ -974,7 +1047,8 @@ module.exports = {
     createRelease, deleteRelease,
     createTopic, deleteTopic,
     createToDo, updateToDo, deleteToDo,
-    createGroup, deleteGroup, renameGroup, getGroupContributors
+    createGroup, deleteGroup, renameGroup, 
+    getGroupContributors, inviteToProject
     
 };
 
