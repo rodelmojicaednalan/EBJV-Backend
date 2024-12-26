@@ -22,7 +22,7 @@ const getUsers = async (req, res) => {
           attributes: ['id', 'project_name']
         },
       ],
-      attributes: ['id', 'first_name', 'last_name', 'sex', 'username', 'email']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email']
     });
     res.status(200).json(user);
   } catch (error) {
@@ -46,7 +46,7 @@ const getUserById = async (req, res) => {
         },
  
       ],
-      attributes: ['id', 'first_name', 'last_name', 'sex', 'username', 'email', 'password']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email', 'password']
     });
     if (user) {
       res.status(200).json(user);
@@ -76,7 +76,7 @@ const getCurrentUser = async (req, res) => {
           attributes: ['role_name', 'role_description'], 
         },
       ],
-      attributes: ['id', 'first_name', 'last_name', 'sex', 'username', 'email']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email']
     });
 
     if (user) {
