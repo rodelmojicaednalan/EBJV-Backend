@@ -32,9 +32,11 @@ module.exports = {
         },
         activity_type: {
           type: Sequelize.ENUM('Project Created', 'File Uploaded', 'File Deleted', 
-            'Release Created', 'Release Deleted', 'Topic Created', 'Topic Deleted',
-            'To Do Created', 'To Do Deleted',
-            'Comment Added', 'Status Changed'),
+          'Release Created', 'Release Deleted', 'Topic Created', 'Topic Deleted',
+          'To Do Created', 'To Do Deleted', 'Created Group', 'Added to Group', 'Invited to Project',
+          'Group Deleted', 'Group Renamed', 'Add People to Project', 'Add People to Group',
+          'File Download',
+          'Comment Added', 'Status Changed'),
         },
         description: {
           type: Sequelize.TEXT,

@@ -122,5 +122,6 @@ router.post('/invite-to-project/:projectId/:id', projectController.inviteToProje
 router.post('/group-invite/:projectId/:id', projectController.inviteToGroup);
 
 router.get('/uploads/:filename', projectController.getFiles);
+router.get('/download-file/:projectId/:fileName', projectController.downloadFiles);
 
 module.exports = router;

@@ -4,7 +4,7 @@ const path = require('path');
 // Set storage for multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  path.join('C:/Users/Admin/Documents/GitHub/EBJV-Backend/',  '/uploads'));
+    cb(null,  '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files/');
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -17,10 +17,11 @@ const fileFilter = (req, file, cb) => {
 
   const extName = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
 
+
   if (extName) {
     return cb(null, true);
   } else {
-    cb(new Error("Only images, videos, and PDFs are allowed!"));
+    cb(new Error("Only images, videos, IFC Files, and PDFs are allowed!"));
   }
 };
 

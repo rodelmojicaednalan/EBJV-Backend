@@ -85,43 +85,80 @@ const getProjectById = async (req, res) => {
       if (project) {
           // Parse the JSON array of file names
           const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
-          const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads';
+          const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
 
-          // Attach file sizes to each file
-          const filesWithSizes = files.map((fileName) => {
-              const filePath = path.join(uploadsDir, fileName);
-              try {
-                  const stats = fs.statSync(filePath); // Synchronously fetch file stats
-                  return {
-                      fileName,
-                      fileSize: stats.size, // File size in bytes
-                  };
-              } catch (err) {
-                  console.error(`Error accessing file: ${fileName}`, err);
-                  return {
-                      fileName,
-                      error: 'File not accessible',
-                  };
-              }
+          // Fetch project activities for this project
+          const activities = await project_activities.findAll({
+              where: { project_id: id },
+              attributes: ['user_id', 'related_data'], // Include only the necessary fields
+              include: [
+                  {
+                      model: users,
+                      as: 'activityUser', // Assuming there's an association to fetch user info
+                      attributes: ['id', 'first_name', 'last_name']
+                  }
+              ]
           });
 
-          const ownerId = project.owner.id; // Owner's ID
+          // Attach file sizes and owners to each file
+          const filesWithDetails = files.map((fileName) => {
+              const filePath = path.join(uploadsDir, fileName);
+              let fileSize, fileOwner;
 
-          const projectViews = project.project_views.map((view) => {
+              // Get file size
+              try {
+                  const stats = fs.statSync(filePath);
+                  fileSize = stats.size;
+              } catch (err) {
+                  console.error(`Error accessing file: ${fileName}`, err);
+                  fileSize = 'File not accessible';
+              }
+
+              // Find the owner by checking related_data in activities
+              const activity = activities.find((act) =>
+                  act.related_data.includes(fileName)
+              );
+
+              if (activity && activity.activityUser) {
+                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
+              } else {
+                  fileOwner = 'Unknown';
+              }
+
               return {
-                  view_name: view.view_name,
-                  view_description: view.view_description,
-                  assigned_tags: view.assigned_tags,
-                  is_owner: view.user_id === ownerId, // Check if view.user_id matches owner.id
+                  fileName,
+                  fileSize,
+                  fileOwner
               };
           });
 
-          // Send the response with files and project views
-          res.status(200).json({
-              ...project.toJSON(),
-              files: filesWithSizes,
-              project_views: projectViews, // Add processed project views
-          });
+          const ownerId = project.owner.id;
+
+          const projectViews = project.project_views.map((view) => ({
+              view_name: view.view_name,
+              view_description: view.view_description,
+              assigned_tags: view.assigned_tags,
+              is_owner: view.user_id === ownerId,
+          }));
+
+          const projectReleases = project.project_releases.map((release) => ({
+          release_name: release.release_name,
+          total_files: release.total_files,
+          due_date: release.due_date,
+          recipients: release.recipients,
+          release_status: release.release_status,
+          release_note: release.release_note,
+          assigned_tags: release.assigned_tags,
+          createdAt: release.createdAt,
+          is_owner: release.user_id === ownerId,
+      }));
+
+        res.status(200).json({
+            ...project.toJSON(),
+            files: filesWithDetails,
+            project_views: projectViews,
+            project_releases: projectReleases
+        });
       } else {
           res.status(404).json({ error: 'Project not found' });
       }
@@ -158,6 +195,7 @@ const getProjectActivity = async (req, res) => {
 
           const projectActivities = project.project_activities.map((activity) => {
               return {
+                  activityId: activity.id,
                   activityType: activity.activity_type,
                   activityDescription: activity.description,
                   relatedData: activity.related_data,
@@ -352,7 +390,7 @@ const updateProject = async (req,res) => {
 
 const deleteFiles = (files) => {
   files.forEach(file => {
-      const filePath = path.join('/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads', file);
+      const filePath = path.join('/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files', file);
       if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
       }
@@ -399,7 +437,7 @@ const getFiles = async (req, res) => {
 
   const uploadsPath = path.join(
     '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
-    'uploads'
+    'uploads/ifc-files'
   );
 
   const filePath = path.join(uploadsPath, filename);
@@ -992,6 +1030,7 @@ const getGroupContributors = async (req, res) => {
 
 const inviteToProject = async (req, res) => {
 const { projectId } = req.params;
+const userId = req.user.id; 
 const { emails, groupId } = req.body;
 
 try {
@@ -1025,6 +1064,13 @@ try {
       project_id: projectId,
     }))
   );
+  await project_activities.create({
+    project_id: project.id,
+    user_id: userId,
+    activity_type: "Add People To Project",
+    description: `Added user(s) to project: `,
+    related_data: `${emails}`
+  });
 
   // If groupId is provided, add users to the group (users_groups table)
   if (groupId) {
@@ -1048,6 +1094,13 @@ try {
           group_id: groupId,
         }))
       );
+        await project_activities.create({
+            project_id: project.id,
+            user_id: userId,
+            activity_type: "Add People To Group",
+            description: `Added user(s) to group: `,
+            related_data: `${emails}`
+          });
     }
   }
 
@@ -1060,6 +1113,7 @@ try {
 
 const inviteToGroup = async (req, res) => {
 const { projectId, id } = req.params;
+const userId = req.user.id; 
 const { emails } = req.body;
 
 try {
@@ -1102,6 +1156,13 @@ try {
           group_id: id,
         }))
       );
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Add People To Group",
+        description: `Added user(s) to group(${group.group_name}): `,
+        related_data: `${emails}`
+      });
     }
   }
 
@@ -1111,6 +1172,57 @@ try {
   res.status(500).json({ error: error.message });
 }
 };
+
+const downloadFiles = async (req, res) => {
+const { projectId, fileName } = req.params;
+const userId = req.user.id; 
+const directory = path.join(
+  '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
+  'uploads/ifc-files'
+);
+
+try {
+  // Construct the full file path
+  const filePath = path.join(directory, fileName);
+  const project = await projects.findByPk(projectId);
+
+  // Validate if project exists
+  if (!project) {
+    return res.status(404).json({ message: 'Project Not Found' });
+  }
+
+  // Validate if file name is provided
+  if (!fileName) {
+    return res.status(400).json({ message: 'File Name is required' });
+  }
+
+  // Check if the file exists in the directory
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: 'File Not Found' });
+  }
+
+  // Stream the file to the client for download
+  res.download(filePath, fileName, (err) => {
+    if (err) {
+      console.error("Error sending file:", err);
+      res.status(500).json({ message: "Error downloading file", error: err.message });
+    } else {
+      console.log(`File "${fileName}" downloaded successfully.`);
+    }
+  });
+  await project_activities.create({
+    project_id: project.id,
+    user_id: userId,
+    activity_type: "File Download",
+    description: `Downloaded file: `,
+    related_data: `${fileName}`
+  });
+} catch (error) {
+  console.error("Error downloading file:", error);
+  res.status(500).json({ error: error.message });
+}
+};
+
 
 
 module.exports = {
@@ -1125,7 +1237,8 @@ createRelease, deleteRelease,
 createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
 createGroup, deleteGroup, renameGroup, 
-getGroupContributors, inviteToProject, inviteToGroup
+getGroupContributors, inviteToProject, inviteToGroup,
+downloadFiles
 
 };
 
