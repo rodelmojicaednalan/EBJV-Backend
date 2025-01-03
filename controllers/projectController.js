@@ -141,18 +141,31 @@ const getProjectById = async (req, res) => {
               is_owner: view.user_id === ownerId,
           }));
 
-          const projectReleases = project.project_releases.map((release) => ({
-          release_name: release.release_name,
-          total_files: release.total_files,
-          due_date: release.due_date,
-          recipients: release.recipients,
-          release_status: release.release_status,
-          release_note: release.release_note,
-          assigned_tags: release.assigned_tags,
-          createdAt: release.createdAt,
-          is_owner: release.user_id === ownerId,
-      }));
+          const projectReleases = project.project_releases.map((release) => {
+              const releaseActivity = activities.find(
+                  (act) =>
+              
+                      act.related_data.includes(release.release_name)
+              );
 
+              const releaseOwner = releaseActivity
+                  ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
+                  : 'Unknown';
+
+              return {
+                  release_name: release.release_name,
+                  total_files: release.total_files,
+                  due_date: release.due_date,
+                  recipients: release.recipients,
+                  release_status: release.release_status,
+                  release_note: release.release_note,
+                  assigned_tags: release.assigned_tags,
+                  createdAt: release.createdAt,
+                  is_owner: release.user_id === ownerId,
+                  release_owner: releaseOwner,
+              };
+          });
+          
         res.status(200).json({
             ...project.toJSON(),
             files: filesWithDetails,
@@ -270,6 +283,7 @@ const getProjectTopics = async (req, res) => {
 
 const getProjectToDos = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
   try {
       const project = await projects.findByPk(id, {
           include: [
@@ -285,13 +299,43 @@ const getProjectToDos = async (req, res) => {
       });
 
       if (project) {
+          
+          const activities = await project_activities.findAll({
+            where: { project_id: project.id },
+            attributes: ['user_id', 'related_data'], // Include only the necessary fields
+            include: [
+                {
+                    model: users,
+                    as: 'activityUser', // Assuming there's an association to fetch user info
+                    attributes: ['id', 'first_name', 'last_name']
+                }
+            ]
+        });
+        
           const ownerId = project.owner.id; // Owner's ID
 
           const projectToDo = project.project_toDos.map((toDo) => {
+            const todoActivity = activities.find((act) => {
+                  let parsedData;
+                  try {
+                      parsedData = JSON.parse(act.related_data); // Parse the JSON string
+                  } catch (error) {
+                      console.error(`Failed to parse related_data: ${act.related_data}`, error);
+                      return false;
+                  }
+                  return parsedData === toDo.title; // Compare the parsed value
+              });
+
+
+            const todoOwner = todoActivity
+                ? `${todoActivity.activityUser.first_name} ${todoActivity.activityUser.last_name}`
+                : 'Unknown';
+              
               return {
                   id: toDo.id,
                   belongsTo: toDo.project_id,
-                  is_owner: toDo.user_id === ownerId, // Check if view.user_id matches owner.id
+                  is_owner: toDo.user_id === userId, // Check if view.user_id matches owner.id
+                  owner: todoOwner,
                   toDoTitle: toDo.title,
                   toDoAssignee: toDo.assignee,
                   toDoDesc: toDo.description,
@@ -300,7 +344,7 @@ const getProjectToDos = async (req, res) => {
                   toDoStatus: toDo.status,
                   toDoAttachments: toDo.attachments,
                   dateCreated: toDo.createdAt,
-                  lastUpdated: toDo.updatedAt
+                  lastUpdated: toDo.updatedAt,
               };
           });
           // Send the response with files and project views
