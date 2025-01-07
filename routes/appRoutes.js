@@ -13,7 +13,7 @@ const rolePermissionController = require('../controllers/rolePermissionControlle
 const projectController = require('../controllers/projectController');
 const staffLogController = require('../controllers/staffLogController');
 
-const upload = require('../utils/multerConfig');
+const {ifcUpload, imageUpload} = require('../utils/multerConfig');
 
 const authorize = require('../middleware/authorizationMiddleware');
 router.use(authorize);
@@ -91,8 +91,8 @@ router.post('/mass-delete-logs/', staffLogController.massDeleteLogs);
 router.get('/projects', projectController.getAllprojects);
 router.get('/my-projects',projectController.getProjectByLoggedInUser);
 router.get('/project/:id', projectController.getProjectById);
-router.post('/create-project', upload.array('project_file'), projectController.createProject);
-router.put('/update-project/:id', upload.array('project_file'), projectController.updateProject);
+router.post('/create-project', ifcUpload.array('project_file'), projectController.createProject);
+router.put('/update-project/:id', imageUpload.single('project_file'), projectController.updateProject);
 router.delete('/delete-project/:id', projectController.deleteProject);
 
 router.get('/project-activities/:id', projectController.getProjectActivity);
@@ -100,7 +100,7 @@ router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
-router.post('/upload-ifc-files/:id', upload.array('project_file', 10), projectController.uploadFile)
+router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 10), projectController.uploadFile)
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
 
 router.post('/create-release/:projectId', projectController.createRelease);

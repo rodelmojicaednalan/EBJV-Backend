@@ -60,124 +60,135 @@ try {
 }
 };
 
-
+const formatDateToInput = (date) => {
+const d = new Date(date);
+const year = d.getFullYear();
+const month = String(d.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+const day = String(d.getDate() + 1).padStart(2, "0");
+return `${year}-${month}-${day}`;
+};  
 
 const getProjectById = async (req, res) => {
-  const { id } = req.params;
-  try {
-      const project = await projects.findByPk(id, {
-          include: [
-              {
-                  model: users,
-                  as: 'owner',
-                  attributes: ['id', 'first_name', 'last_name']
-              },
-              {
-                  model: project_views,
-                  attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
-              },
-              {
-                  model: project_releases
-              }
-          ]
-      });
+const { id } = req.params;
+try {
+    const project = await projects.findByPk(id, {
+        include: [
+            {
+                model: users,
+                as: 'owner',
+                attributes: ['id', 'first_name', 'last_name']
+            },
+            {
+                model: project_views,
+                attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
+            },
+            {
+                model: project_releases
+            }
+        ]
+    });
 
-      if (project) {
-          // Parse the JSON array of file names
-          const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
-          const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
+    if (project) {
+       const formattedStartDate = project.start_date ? formatDateToInput(project.start_date) : null;
+       const formattedEndDate = project.end_date ? formatDateToInput(project.end_date) : null;
 
-          // Fetch project activities for this project
-          const activities = await project_activities.findAll({
-              where: { project_id: id },
-              attributes: ['user_id', 'related_data'], // Include only the necessary fields
-              include: [
-                  {
-                      model: users,
-                      as: 'activityUser', // Assuming there's an association to fetch user info
-                      attributes: ['id', 'first_name', 'last_name']
-                  }
-              ]
-          });
+        // Parse the JSON array of file names
+        const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
+        const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
 
-          // Attach file sizes and owners to each file
-          const filesWithDetails = files.map((fileName) => {
-              const filePath = path.join(uploadsDir, fileName);
-              let fileSize, fileOwner;
-
-              // Get file size
-              try {
-                  const stats = fs.statSync(filePath);
-                  fileSize = stats.size;
-              } catch (err) {
-                  console.error(`Error accessing file: ${fileName}`, err);
-                  fileSize = 'File not accessible';
-              }
-
-              // Find the owner by checking related_data in activities
-              const activity = activities.find((act) =>
-                  act.related_data.includes(fileName)
-              );
-
-              if (activity && activity.activityUser) {
-                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
-              } else {
-                  fileOwner = 'Unknown';
-              }
-
-              return {
-                  fileName,
-                  fileSize,
-                  fileOwner
-              };
-          });
-
-          const ownerId = project.owner.id;
-
-          const projectViews = project.project_views.map((view) => ({
-              view_name: view.view_name,
-              view_description: view.view_description,
-              assigned_tags: view.assigned_tags,
-              is_owner: view.user_id === ownerId,
-          }));
-
-          const projectReleases = project.project_releases.map((release) => {
-              const releaseActivity = activities.find(
-                  (act) =>
-              
-                      act.related_data.includes(release.release_name)
-              );
-
-              const releaseOwner = releaseActivity
-                  ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
-                  : 'Unknown';
-
-              return {
-                  release_name: release.release_name,
-                  total_files: release.total_files,
-                  due_date: release.due_date,
-                  recipients: release.recipients,
-                  release_status: release.release_status,
-                  release_note: release.release_note,
-                  assigned_tags: release.assigned_tags,
-                  createdAt: release.createdAt,
-                  is_owner: release.user_id === ownerId,
-                  release_owner: releaseOwner,
-              };
-          });
-          
-        res.status(200).json({
-            ...project.toJSON(),
-            files: filesWithDetails,
-            project_views: projectViews,
-            project_releases: projectReleases
+        // Fetch project activities for this project
+        const activities = await project_activities.findAll({
+            where: { project_id: id },
+            attributes: ['user_id', 'related_data'], // Include only the necessary fields
+            include: [
+                {
+                    model: users,
+                    as: 'activityUser', // Assuming there's an association to fetch user info
+                    attributes: ['id', 'first_name', 'last_name']
+                }
+            ]
         });
-      } else {
-          res.status(404).json({ error: 'Project not found' });
-      }
-  } catch (error) {
-      res.status(500).json({ error: error.message });
-  }
+
+        // Attach file sizes and owners to each file
+        const filesWithDetails = files.map((fileName) => {
+            const filePath = path.join(uploadsDir, fileName);
+            let fileSize, fileOwner;
+
+            // Get file size
+            try {
+                const stats = fs.statSync(filePath);
+                fileSize = stats.size;
+            } catch (err) {
+                console.error(`Error accessing file: ${fileName}`, err);
+                fileSize = 'File not accessible';
+            }
+
+            // Find the owner by checking related_data in activities
+            const activity = activities.find((act) =>
+                act.related_data.includes(fileName)
+            );
+
+            if (activity && activity.activityUser) {
+                fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
+            } else {
+                fileOwner = 'Unknown';
+            }
+
+            return {
+                fileName,
+                fileSize,
+                fileOwner
+            };
+        });
+
+        const ownerId = project.owner.id;
+
+        const projectViews = project.project_views.map((view) => ({
+            view_name: view.view_name,
+            view_description: view.view_description,
+            assigned_tags: view.assigned_tags,
+            is_owner: view.user_id === ownerId,
+        }));
+
+        const projectReleases = project.project_releases.map((release) => {
+            const releaseActivity = activities.find(
+                (act) =>
+            
+                    act.related_data.includes(release.release_name)
+            );
+
+            const releaseOwner = releaseActivity
+                ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
+                : 'Unknown';
+
+            return {
+                release_name: release.release_name,
+                total_files: release.total_files,
+                due_date: release.due_date,
+                recipients: release.recipients,
+                release_status: release.release_status,
+                release_note: release.release_note,
+                assigned_tags: release.assigned_tags,
+                createdAt: release.createdAt,
+                is_owner: release.user_id === ownerId,
+                release_owner: releaseOwner,
+            };
+        });
+        
+      res.status(200).json({
+          ...project.toJSON(),
+          start_date: formattedStartDate,
+          end_date: formattedEndDate,
+          files: filesWithDetails,
+          project_views: projectViews,
+          project_releases: projectReleases
+      });
+    } else {
+        res.status(404).json({ error: 'Project not found' });
+    }
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
 };
 
 const getProjectActivity = async (req, res) => {
@@ -249,13 +260,41 @@ const getProjectTopics = async (req, res) => {
       });
 
       if (project) {
+          const activities = await project_activities.findAll({
+            where: { project_id: project.id },
+            attributes: ['user_id', 'related_data'], // Include only the necessary fields
+            include: [
+                {
+                    model: users,
+                    as: 'activityUser', // Assuming there's an association to fetch user info
+                    attributes: ['id', 'first_name', 'last_name']
+                }
+            ]
+        });
           const ownerId = project.owner.id; // Owner's ID
 
           const projectTopics = project.project_topics.map((topic) => {
+              const topicActivity = activities.find((act) => {
+                  let parsedData;
+                  try {
+                      parsedData = JSON.parse(act.related_data); // Parse the JSON string
+                  } catch (error) {
+                      console.error(`Failed to parse related_data: ${act.related_data}`, error);
+                      return false;
+                  }
+                  return parsedData === topic.topic_name; // Compare the parsed value
+              });
+
+
+            const topicOwner = topicActivity
+                ? `${topicActivity.activityUser.first_name} ${topicActivity.activityUser.last_name}`
+                : 'Unknown';
+                
               return {
                   id: topic.id,
                   belongsTo: topic.project_id,
                   is_owner: topic.user_id === ownerId, // Check if view.user_id matches owner.id
+                  topicCreator: topicOwner,
                   topicName: topic.topic_name,
                   topicDescription: topic.topic_description,
                   assignee: topic.assignee,
@@ -389,47 +428,69 @@ const createProject = async (req, res) => {
   }
 };
 
-const updateProject = async (req,res) => {
-  try{
-      const { project_name, project_address, project_status, delete_files} = req.body;
-      const project = await projects.findByPk(req.params.id);
+const updateProject = async (req, res) => {
+const userId = req.user.id;
+try {
+  const { projectName, startDate, endDate, projectDescription } = req.body;
+  const project = await projects.findByPk(req.params.id);
 
-      if (!project) {
-          return res.status(400).json({message: 'project not found' })
-      }
-
-     if (project_name) project.project_name = project_name;
-     if (project_address)  project.project_address = project_address;
-     if (project_status) project.project_status = project_status;
-     
-
-     const currentFiles = project.project_file ? JSON.parse(project.project_file) : [];
-      const newFiles = req.files ? req.files.map(file => file.filename) : [];
-      let updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
-
-
-     if (delete_files) {
-      const filesToDelete = JSON.parse(delete_files);
-
-      try {
-          deleteFiles(filesToDelete); // Helper function defined below
-          updatedFiles = updatedFiles.filter(file => !filesToDelete.includes(file));
-      } catch (error) {
-          console.error('Error deleting files:', error);
-          return res.status(500).json({ message: 'Error deleting files', error: error.message });
-      }
+  if (!project) {
+    return res.status(400).json({ message: "Project not found" });
   }
-      project.project_file = updatedFiles;
-      if (project.project_file === "[]" || project.project_file === [] ){
-          project.project_file = null;
-      }
 
-      await project.save();
+  // Store the changes for activity logging
+  const changes = [];
 
-      res.status(200).json({ message: 'Project edited successfully', data: project });
-  } catch (error) {
-      res.status(500).json({ message: 'Error updating project', error: error.message });
+  if (projectName && projectName !== project.project_name) {
+    changes.push(`Project Name: ${project.project_name} → ${projectName}`);
+    project.project_name = projectName;
   }
+
+  const formattedStartDate = project.start_date ? formatDateToInput(project.start_date) : null;
+  const formattedEndDate = project.end_date ? formatDateToInput(project.end_date) : null;
+
+  if (startDate && startDate !== (formattedStartDate)) {
+    changes.push(`Start Date: ${formattedStartDate} → ${startDate}`);
+    project.start_date = startDate;
+  }
+
+  if (endDate && endDate !== formattedEndDate) {
+    changes.push(`End Date: ${formattedEndDate} → ${endDate}`);
+    project.end_date = endDate;
+  }
+
+  if (projectDescription && projectDescription !== project.project_description) {
+    changes.push(`Description: ${project.project_description} → ${projectDescription}`);
+    project.project_description = projectDescription;
+  }
+
+  // Handle thumbnail update
+  if (req.file) {
+    console.log(req.file);
+    if (project.project_thumbnail) {
+      deleteFiles([project.project_thumbnail]); // Ensure this function is implemented
+    }
+    changes.push(`Thumbnail updated: ${req.file.filename}`);
+    project.project_thumbnail = req.file.filename; // Save new thumbnail filename
+  }
+
+  // Log the activity if there are any changes
+  if (changes.length > 0) {
+    await project_activities.create({
+      project_id: project.id,
+      user_id: userId,
+      activity_type: "Project Updated",
+      description: `Updated Project Details:`,
+      related_data: changes.join("; "),
+    });
+  }
+
+  await project.save();
+
+  res.status(200).json({ message: "Project edited successfully", data: project });
+} catch (error) {
+  res.status(500).json({ message: "Error updating project", error: error.message });
+}
 };
 
 const deleteFiles = (files) => {
