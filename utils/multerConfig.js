@@ -25,13 +25,13 @@ const thumbnailStorage = multer.diskStorage({
 
 // File filter for images/videos only
 const ifcFilter = (req, file, cb) => {
-  const allowedExtensions = /ifc/;
+  const allowedExtensions = /ifc|nc1|dxf|pdf/;
   const extName = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
 
   if (extName) {
     return cb(null, true);
   } else {
-    cb(new Error("Only IFC Files are allowed!"));
+    cb(new Error("Only IFC, NC1, DXF & PDF Files are allowed!"));
   }
 };
 
@@ -43,7 +43,7 @@ const imageFilter = (req, file, cb) => {
   if (extName) {
     return cb(null, true);
   } else {
-    cb(new Error("Only images, are allowed!"));
+    cb(new Error("Only images are allowed!"));
   }
 };
 
@@ -60,6 +60,7 @@ const imageUpload = multer({
   fileFilter: imageFilter,
   limits: { fileSize: 5000000 } // 50MB file size limit
 });
+
 module.exports = {
   ifcUpload, imageUpload
 };

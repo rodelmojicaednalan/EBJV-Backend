@@ -101,6 +101,7 @@ router.get('/project-contributors/:projectId', projectController.getContributors
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
 router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 10), projectController.uploadFile)
+router.post('/create-folder/:id', projectController.createFolder);
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
 
 router.post('/create-release/:projectId', projectController.createRelease);

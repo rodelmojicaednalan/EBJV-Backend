@@ -125,7 +125,7 @@ try {
 
             // Find the owner by checking related_data in activities
             const activity = activities.find((act) =>
-                act.related_data.includes(fileName)
+               act.related_data && act.related_data.includes(fileName)
             );
 
             if (activity && activity.activityUser) {
@@ -701,6 +701,18 @@ const uploadFile = async (req,res) => {
       console.error("File upload error:", error);
   res.status(500).json({error: "Upload Failed", details: error.message})
   }
+};
+
+const createFolder = async (req,res) => {
+    const userId = req.user.id;
+    const project = await projects.findByPk(req.params.id);
+    try{
+        
+        
+      res.status(200).json({message: "Folder created successfully"})      
+    } catch (error){
+      res.status(500).json({error: error.message});
+    }
 };
 
 const deleteFile = async (req, res) => {
@@ -1337,7 +1349,7 @@ getProjectByLoggedInUser,
 getFiles,
 getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
-uploadFile, deleteFile,
+uploadFile, createFolder, deleteFile,
 createRelease, deleteRelease,
 createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
