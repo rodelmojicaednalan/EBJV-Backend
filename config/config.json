@@ -1,8 +1,8 @@
 {
   "development": {
-   "username": "reviveph_userserverdb",
-    "password": "bfYxB%uw~oPI",
-    "database": "reviveph_developmentDB",
+   "username": "root",
+    "password": "",
+    "database": "ebjv-dev-db",
     "host": "localhost",
     "dialect": "mysql",
     "dialectOptions": {
