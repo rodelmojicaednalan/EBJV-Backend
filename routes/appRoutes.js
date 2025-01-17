@@ -14,7 +14,7 @@ const projectController = require('../controllers/projectController');
 const staffLogController = require('../controllers/staffLogController');
 
 const {ifcUpload, imageUpload} = require('../utils/multerConfig');
-
+router.post('/request-access', projectController.requestAccess);
 const authorize = require('../middleware/authorizationMiddleware');
 router.use(authorize);
 const permit = require('../middleware/permissionMiddleware');

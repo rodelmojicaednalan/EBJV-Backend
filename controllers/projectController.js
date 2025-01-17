@@ -4,6 +4,7 @@ const {projects, users, project_activities, project_views,
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
+const { sendEmail } = require("../utils/emailService");
 //const e = require('cors');
 
 const getAllprojects = async (req, res) => {
@@ -162,6 +163,7 @@ try {
                 : 'Unknown';
 
             return {
+                releaseId: release.id,
                 release_name: release.release_name,
                 total_files: release.total_files,
                 due_date: release.due_date,
@@ -380,7 +382,7 @@ const getProjectToDos = async (req, res) => {
                   toDoDesc: toDo.description,
                   toDoStatus: toDo.status,
                   toDoPriority: toDo.priority,
-                  toDoStatus: toDo.status,
+                  toDoType: toDo.type,
                   toDoAttachments: toDo.attachments,
                   dateCreated: toDo.createdAt,
                   lastUpdated: toDo.updatedAt,
@@ -1340,7 +1342,201 @@ try {
 }
 };
 
+const requestAccess = async (req,res) => {
+  const { name, sex, email, contact, reason } = req.body;
+  const adminEmail = 'bernardino.iformatlogic@gmail.com'
+  try{
+    await sendEmail(
+      adminEmail, 
+      'EBJV App Account Request',
+      `
+      A New Account Request has been made, their details are:
+      Name: ${name},
+      Sex: ${sex},
+      Email: ${email},
+      Contact: ${contact},
+      Reason: ${reason},
+      Please review and approve or reject this request.
+      `,
+      `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EBJV Account Request</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        /* Container styles */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header styles */
+        .header {
+            background-color: #eb6314;
+            padding: 24px;
+            text-align: center;
+            color: #1e293b;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Content styles */
+        .content {
+            padding: 32px 24px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .detail-row {
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #475569;
+            margin-right: 8px;
+        }
+
+        .detail-value {
+            color: #1e293b;
+        }
+
+        /* Button styles */
+        .button {
+            display: inline-block;
+            background-color: #eb6314;
+            color: #ffffff;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 24px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color:rgb(243, 105, 25);
+        }
+
+        /* Footer styles */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #64748b;
+            font-size: 12px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* Responsive styles */
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 10px;
+                width: auto;
+            }
+
+            .content {
+                padding: 24px 16px;
+            }
+
+            .button {
+                display: block;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            EBJV APP ACCOUNT REQUEST
+        </div>
+
+        <div class="content">
+            <h1 class="title">A New Account Request has been made, their details are:</h1>
+            
+            <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">${name}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Sex:</span>
+                <span class="detail-value">${sex}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">${email}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Contact:</span>
+                <span class="detail-value">${contact}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Reason:</span>
+                <span class="detail-value">${reason}</span>
+            </div>
+
+            <p style="margin: 24px 0; color: #475569;">
+                Please review and approve or reject this request.<br>
+                Approved? Head to the app to create an account.
+            </p>
+
+            <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+                Head to the App
+            </a>
+        </div>
+
+        <div class="footer">
+            EBJV<br>
+            Australia
+        </div>
+    </div>
+</body>
+</html>
+      `
+    )
+    res.status(200).json({message: 'Request Email Sent Successfully'});
+  } catch (error){
+    res.status(500).json({error: error.message})
+  }
+};
 
 module.exports = {
 getAllprojects, getProjectById,
@@ -1355,7 +1551,8 @@ createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
 createGroup, deleteGroup, renameGroup, 
 getGroupContributors, inviteToProject, inviteToGroup,
-downloadFiles
+downloadFiles,
+requestAccess
 
 };
 
