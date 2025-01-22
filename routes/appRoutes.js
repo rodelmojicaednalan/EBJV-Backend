@@ -121,6 +121,8 @@ router.get('/group-contributors/:projectId/:groupId', projectController.getGroup
 
 router.post('/invite-to-project/:projectId/:id', projectController.inviteToProject);
 router.post('/group-invite/:projectId/:id', projectController.inviteToGroup);
+router.delete('/remove-contributor/:projectId/:contId', projectController.removeContributor);
+router.delete('/remove-groupMember/:projectId/:contId/:groupId', projectController.removeFromGroup)
 
 router.get('/uploads/:filename', projectController.getFiles);
 router.get('/download-file/:projectId/:fileName', projectController.downloadFiles);

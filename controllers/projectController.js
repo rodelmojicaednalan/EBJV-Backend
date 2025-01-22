@@ -859,6 +859,45 @@ const createTopic = async (req, res) => {
   }
 };
 
+const updateTopic = async (req, res) => {
+  const { projectId, id } = req.params;
+  const userId = req.user.id; 
+  const {topicName, topicDesc, topicType, assigneeList, topicStatus, topicPrio, topicDue} = req.body;
+  try{
+      const project = await projects.findByPk(projectId)
+      if (!project){
+          res.status(404).json({message: "Project not found"})
+      }
+      const topic = await project_topics.findByPk(id)
+      if (!topic){
+          res.status(404).json({message: 'Topic not found'});
+      }
+      
+      await topic.update({
+        topic_name: topicName,
+        topic_description: topicDesc,
+        assignee: assigneeList,
+        topic_type: topicType,
+        topic_status: topicStatus,
+        topic_priority: topicPrio,
+        topic_dueDate: topicDue
+      })
+      
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Topic Updated",
+        description: `Updated Topic: `,
+        related_data: `${topic.topic_name}`
+      })
+      
+  res.status(200).json({message: 'Topic updated'});
+} catch (error){
+  console.error("Error finding project");
+  res.status(500).json({error: error.message});
+}
+}
+
 const deleteTopic = async (req, res) => {
   const projectId = req.params.projectId;
   const userId = req.user.id; 
@@ -936,6 +975,9 @@ const createToDo = async(req, res) => {
 
 const updateToDo = async (req, res) => {
   try {
+    const { projectId, id } = req.params;
+    const userId = req.user.id; 
+    const { todoTitle, todoDesc, todoAssignee, todoPriority, todoDueDate, todoType, todoAttachments } = req.body;
 
   res.status(200).json({message: 'Update to do success'})
   } catch (error){
@@ -1292,6 +1334,54 @@ try {
 }
 };
 
+const removeContributor = async(req, res ) => {
+  const { projectId, contId } = req.params;
+  const userId = req.user.id; 
+  try{
+    const projectContributor = await users_projects.findOne({where: { user_id: contId, project_id: projectId}})
+    if(!projectContributor){
+      return res.status(404).json({ message: 'Contributor not found in the project'})
+    }
+    await projectContributor.destroy();
+
+    await project_activities.create({
+      project_id: projectId,
+      user_id: userId,
+      activity_type: "Remove Contributor",
+      description: `Removed user from project`
+    });
+  res.status(200).json({message: 'Contributor removed successfully'})
+  } catch (error){
+  res.status(500).json({ error: error.message})
+  }
+}
+
+const removeFromGroup = async(req, res ) => {
+  const { projectId, contId, groupId } = req.params;
+  const userId = req.user.id; 
+  try{
+    const projectGroup = await groups.findOne({where: {id: groupId, project_id: projectId}})
+    if(!projectGroup){
+      return res.status(404).json({ message: 'Group not found in the project'})
+    }
+    const groupContributor = await users_groups.findOne({where: { user_id: contId, group_id: groupId}})
+    if(!groupContributor){
+      return res.status(404).json({ message: 'Contributor not found in the group'})
+    }
+    await groupContributor.destroy();
+
+    await project_activities.create({
+      project_id: projectId,
+      user_id: userId,
+      activity_type: "Remove from Group",
+      description: `Removed user from the group`
+    });
+  res.status(200).json({message: 'Contributor removed successfully'})
+  } catch (error){
+  res.status(500).json({ error: error.message})
+  }
+}
+
 const downloadFiles = async (req, res) => {
 const { projectId, fileName } = req.params;
 const userId = req.user.id; 
@@ -1343,199 +1433,200 @@ try {
 };
 
 const requestAccess = async (req,res) => {
-  const { name, sex, email, contact, reason } = req.body;
-  const adminEmail = 'bernardino.iformatlogic@gmail.com'
-  try{
-    await sendEmail(
-      adminEmail, 
-      'EBJV App Account Request',
-      `
-      A New Account Request has been made, their details are:
-      Name: ${name},
-      Sex: ${sex},
-      Email: ${email},
-      Contact: ${contact},
-      Reason: ${reason},
-      Please review and approve or reject this request.
-      `,
-      `
+const { firstName, lastName, email, project, contact, reason } = req.body;
+const adminEmail = 'chris.pieri@ebjv.com.au'
+try{
+  await sendEmail(
+    adminEmail, 
+    'EBJV App Account Request',
+     `
+     A New Account Request has been made, their details are:
+     Name: ${firstName} ${lastName},
+     Email: ${email},
+     Project: ${project},
+     Contact: ${contact},
+     Reason: ${reason},
+     Please review and approve or reject this request.
+     `,
+    `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EBJV Account Request</title>
-    <style>
-        /* Reset styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EBJV Account Request</title>
+  <style>
+      /* Reset styles */
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
 
-        /* Base styles */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 0;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
+      /* Base styles */
+      body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #f8fafc;
+          margin: 0;
+          padding: 0;
+          -webkit-text-size-adjust: 100%;
+          -ms-text-size-adjust: 100%;
+      }
 
-        /* Container styles */
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 20px auto;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+      /* Container styles */
+      .container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          margin: 20px auto;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
 
-        /* Header styles */
-        .header {
-            background-color: #eb6314;
-            padding: 24px;
-            text-align: center;
-            color: #1e293b;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+      /* Header styles */
+      .header {
+          background-color: #eb6314;
+          padding: 24px;
+          text-align: center;
+          color: #1e293b;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+      }
 
-        /* Content styles */
-        .content {
-            padding: 32px 24px;
-        }
+      /* Content styles */
+      .content {
+          padding: 32px 24px;
+      }
 
-        .title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 24px;
-            line-height: 1.4;
-        }
+      .title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 24px;
+          line-height: 1.4;
+      }
 
-        .detail-row {
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e2e8f0;
-        }
+      .detail-row {
+          margin-bottom: 16px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #e2e8f0;
+      }
 
-        .detail-label {
-            font-weight: 600;
-            color: #475569;
-            margin-right: 8px;
-        }
+      .detail-label {
+          font-weight: 600;
+          color: #475569;
+          margin-right: 8px;
+      }
 
-        .detail-value {
-            color: #1e293b;
-        }
+      .detail-value {
+          color: #1e293b;
+      }
 
-        /* Button styles */
-        .button {
-            display: inline-block;
-            background-color: #eb6314;
-            color: #ffffff;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin-top: 24px;
-            text-align: center;
-            transition: background-color 0.2s;
-        }
-        .button:hover {
-            background-color:rgb(243, 105, 25);
-        }
+      /* Button styles */
+      .button {
+          display: inline-block;
+          background-color: #eb6314;
+          color: #ffffff;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 600;
+          margin-top: 24px;
+          text-align: center;
+          transition: background-color 0.2s;
+      }
 
-        /* Footer styles */
-        .footer {
-            text-align: center;
-            padding: 24px;
-            color: #64748b;
-            font-size: 12px;
-            background-color: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-        }
+      .button:hover {
+          background-color:rgb(243, 105, 25);
+      }
 
-        /* Responsive styles */
-        @media only screen and (max-width: 600px) {
-            .container {
-                margin: 10px;
-                width: auto;
-            }
+      /* Footer styles */
+      .footer {
+          text-align: center;
+          padding: 24px;
+          color: #64748b;
+          font-size: 12px;
+          background-color: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+      }
 
-            .content {
-                padding: 24px 16px;
-            }
+      /* Responsive styles */
+      @media only screen and (max-width: 600px) {
+          .container {
+              margin: 10px;
+              width: auto;
+          }
 
-            .button {
-                display: block;
-                width: 100%;
-            }
-        }
-    </style>
+          .content {
+              padding: 24px 16px;
+          }
+
+          .button {
+              display: block;
+              width: 100%;
+          }
+      }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            EBJV APP ACCOUNT REQUEST
-        </div>
+  <div class="container">
+      <div class="header">
+          EBJV APP ACCOUNT REQUEST
+      </div>
 
-        <div class="content">
-            <h1 class="title">A New Account Request has been made, their details are:</h1>
-            
-            <div class="detail-row">
-                <span class="detail-label">Name:</span>
-                <span class="detail-value">${name}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Sex:</span>
-                <span class="detail-value">${sex}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Email:</span>
-                <span class="detail-value">${email}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Contact:</span>
-                <span class="detail-value">${contact}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Reason:</span>
-                <span class="detail-value">${reason}</span>
-            </div>
+      <div class="content">
+          <h1 class="title">A New Account Request has been made, their details are:</h1>
+          
+          <div class="detail-row">
+              <span class="detail-label">Name:</span>
+              <span class="detail-value">${firstName} ${lastName}</span>
+          </div>
+          
+          <div class="detail-row">
+              <span class="detail-label">Email:</span>
+              <span class="detail-value">${email}</span>
+          </div>
+          
+          <div class="detail-row">
+              <span class="detail-label">Project:</span>
+              <span class="detail-value">${project}</span>
+          </div>
+          
+          <div class="detail-row">
+              <span class="detail-label">Contact:</span>
+              <span class="detail-value">${contact}</span>
+          </div>
+          
+          <div class="detail-row">
+              <span class="detail-label">Reason:</span>
+              <span class="detail-value">${reason}</span>
+          </div>
 
-            <p style="margin: 24px 0; color: #475569;">
-                Please review and approve or reject this request.<br>
-                Approved? Head to the app to create an account.
-            </p>
+          <p style="margin: 24px 0; color: #475569;">
+              Please review and approve or reject this request.<br>
+              Approved? Head to the app to create an account.
+          </p>
 
-            <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
-                Head to the App
-            </a>
-        </div>
+          <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+              Head to the App
+          </a>
+      </div>
 
-        <div class="footer">
-            EBJV<br>
-            Australia
-        </div>
-    </div>
+      <div class="footer">
+          EBJV<br>
+          Australia
+      </div>
+  </div>
 </body>
 </html>
-      `
-    )
-    res.status(200).json({message: 'Request Email Sent Successfully'});
-  } catch (error){
-    res.status(500).json({error: error.message})
-  }
+    `
+  )
+  res.status(200).json({message: 'Request Email Sent Successfully'});
+} catch (error){
+  res.status(500).json({error: error.message})
+}
 };
 
 module.exports = {
@@ -1547,12 +1638,11 @@ getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
 uploadFile, createFolder, deleteFile,
 createRelease, deleteRelease,
-createTopic, deleteTopic,
+createTopic, updateTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
 createGroup, deleteGroup, renameGroup, 
-getGroupContributors, inviteToProject, inviteToGroup,
-downloadFiles,
-requestAccess
+getGroupContributors, inviteToProject, inviteToGroup, removeContributor, removeFromGroup,
+downloadFiles, requestAccess
 
 };
 
