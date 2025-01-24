@@ -91,7 +91,7 @@ const getCurrentUser = async (req, res) => {
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
-        sex: user.sex,
+        // sex: user.sex,
         username: user.username,
         email: user.email,
         roles: rolesWithPermissions,
@@ -109,9 +109,9 @@ const getCurrentUser = async (req, res) => {
 
 
 const addUser = async (req, res) => {
-  const { first_name, last_name, sex, username, email, password, role_name} = req.body;
+  const { first_name, last_name, username, email, password, role_name} = req.body;
   try {
-    const newUser = await users.create({first_name, last_name, sex, username, email, password });
+    const newUser = await users.create({first_name, last_name, username, email, password });
    
     const role = await roles.findOne({where: {role_name}});
     if(!role){
@@ -123,8 +123,192 @@ const addUser = async (req, res) => {
     });
     
     res.status(201).json({ message: 'User created successfully', user: newUser });
-    /*await sendEmail(newUser.email, 'Welcome to Revive Pharmacy', 
-      `Hello ${newUser.first_name}, your account has been created successfully. Your username is: ${newUser.username} and your password is ${password}. Kindly update your password through your Profile Page once you have logged in to ensure account security. Thank you!`);*/
+    await sendEmail(
+      email, 
+      `EBJV App ${role_name} Account Creation`,
+       `
+       Welcome! You have been granted an account for the EBJV App, your details are:
+       Name: ${first_name} ${last_name},
+       Email: ${email},
+       Username: ${username},
+       Password: ${password},
+       Role: ${role_name}
+       Please login to the EBJV App at https://evjbportal.olongapobataanzambalesads.com.
+       `,
+      `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EBJV Account Request</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+  
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+  
+        /* Container styles */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+  
+        /* Header styles */
+        .header {
+            background-color: #eb6314;
+            padding: 24px;
+            text-align: center;
+            color: #1e293b;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+  
+        /* Content styles */
+        .content {
+            padding: 32px 24px;
+        }
+  
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+  
+        .detail-row {
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+  
+        .detail-label {
+            font-weight: 600;
+            color: #475569;
+            margin-right: 8px;
+        }
+  
+        .detail-value {
+            color: #1e293b;
+        }
+  
+        /* Button styles */
+        .button {
+            display: inline-block;
+            background-color: #eb6314;
+            color: #ffffff;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 24px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+  
+        .button:hover {
+            background-color:rgb(243, 105, 25);
+        }
+  
+        /* Footer styles */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #64748b;
+            font-size: 12px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+  
+        /* Responsive styles */
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 10px;
+                width: auto;
+            }
+  
+            .content {
+                padding: 24px 16px;
+            }
+  
+            .button {
+                display: block;
+                width: 100%;
+            }
+        }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+        <div class="header">
+            EBJV ${role_name} ACCOUNT CREATION
+        </div>
+  
+        <div class="content">
+            <h1 class="title"> Welcome! You have been granted an account for the EBJV App, your details are:</h1>
+            
+            <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">${first_name} ${last_name}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">${email}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Username:</span>
+                <span class="detail-value">${username}</span>
+            </div>
+            
+            <div class="detail-row">
+                <span class="detail-label">Password:</span>
+                <span class="detail-value">${password}</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Role:</span>
+                <span class="detail-value">${role_name}</span>
+            </div>
+  
+            <p style="margin: 24px 0; color: #475569;">
+             Visit the app through the link below to get started.
+            </p>
+  
+            <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+                Head to the App
+            </a>
+        </div>
+  
+        <div class="footer">
+            EBJV<br>
+            Australia
+        </div>
+    </div>
+  </body>
+  </html>
+      `
+    )
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

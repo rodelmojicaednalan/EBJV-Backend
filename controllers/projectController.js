@@ -859,45 +859,6 @@ const createTopic = async (req, res) => {
   }
 };
 
-const updateTopic = async (req, res) => {
-  const { projectId, id } = req.params;
-  const userId = req.user.id; 
-  const {topicName, topicDesc, topicType, assigneeList, topicStatus, topicPrio, topicDue} = req.body;
-  try{
-      const project = await projects.findByPk(projectId)
-      if (!project){
-          res.status(404).json({message: "Project not found"})
-      }
-      const topic = await project_topics.findByPk(id)
-      if (!topic){
-          res.status(404).json({message: 'Topic not found'});
-      }
-      
-      await topic.update({
-        topic_name: topicName,
-        topic_description: topicDesc,
-        assignee: assigneeList,
-        topic_type: topicType,
-        topic_status: topicStatus,
-        topic_priority: topicPrio,
-        topic_dueDate: topicDue
-      })
-      
-      await project_activities.create({
-        project_id: project.id,
-        user_id: userId,
-        activity_type: "Topic Updated",
-        description: `Updated Topic: `,
-        related_data: `${topic.topic_name}`
-      })
-      
-  res.status(200).json({message: 'Topic updated'});
-} catch (error){
-  console.error("Error finding project");
-  res.status(500).json({error: error.message});
-}
-}
-
 const deleteTopic = async (req, res) => {
   const projectId = req.params.projectId;
   const userId = req.user.id; 
@@ -975,9 +936,6 @@ const createToDo = async(req, res) => {
 
 const updateToDo = async (req, res) => {
   try {
-    const { projectId, id } = req.params;
-    const userId = req.user.id; 
-    const { todoTitle, todoDesc, todoAssignee, todoPriority, todoDueDate, todoType, todoAttachments } = req.body;
 
   res.status(200).json({message: 'Update to do success'})
   } catch (error){
@@ -1195,80 +1153,248 @@ const userId = req.user.id;
 const { emails, groupId } = req.body;
 
 try {
-  const project = await projects.findByPk(projectId);
-  if (!project) {
-    return res.status(404).json({ error: "Project not found" });
+const project = await projects.findByPk(projectId);
+if (!project) {
+  return res.status(404).json({ error: "Project not found" });
+}
+
+// Check if the group exists if groupId is provided
+let group = null;
+if (groupId) {
+  group = await groups.findByPk(groupId);
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
   }
+}
 
-  // Check if the group exists if groupId is provided
-  let group = null;
-  if (groupId) {
-    group = await groups.findByPk(groupId);
-    if (!group) {
-      return res.status(404).json({ error: "Group not found" });
-    }
-  }
+// Add contributors to the project (users_projects table)
+const contributorsToAdd = await users.findAll({
+  where: { email: emails },
+});
 
-  // Add contributors to the project (users_projects table)
-  const contributorsToAdd = await users.findAll({
-    where: { email: emails },
-  });
+if (contributorsToAdd.length === 0) {
+  return res.status(404).json({ error: "No users found with the provided emails" });
+}
 
-  if (contributorsToAdd.length === 0) {
-    return res.status(404).json({ error: "No users found with the provided emails" });
-  }
+// Insert into users_projects (to link users to the project)
+await users_projects.bulkCreate(
+  contributorsToAdd.map((user) => ({
+    user_id: user.id,
+    project_id: projectId,
+  }))
+);
+await project_activities.create({
+  project_id: project.id,
+  user_id: userId,
+  activity_type: "Add People To Project",
+  description: `Added user(s) to project: `,
+  related_data: `${emails}`
+});
+// send email to invited contributors
+for (const contributor of contributorsToAdd) {
+  const { first_name: firstName, last_name: lastName, email } = contributor;
 
-  // Insert into users_projects (to link users to the project)
-  await users_projects.bulkCreate(
-    contributorsToAdd.map((user) => ({
-      user_id: user.id,
-      project_id: projectId,
-    }))
+  await sendEmail(
+    email, // Recipient email
+    'Welcome to the EBJV Project Team!', // Subject
+    `
+    Dear ${firstName},
+    We’re excited to welcome you as a member of the EBJV project: ${project.project_name}. 
+
+    Your involvement is key to its success. You can now access the project and collaborate with the team. 
+    `, // Plain-text version of the email
+    `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EBJV Account Request</title>
+  <style>
+      /* Reset styles */
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+
+      /* Base styles */
+      body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #f8fafc;
+          margin: 0;
+          padding: 0;
+          -webkit-text-size-adjust: 100%;
+          -ms-text-size-adjust: 100%;
+      }
+
+      /* Container styles */
+      .container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          margin: 20px auto;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Header styles */
+      .header {
+          background-color: #eb6314;
+          padding: 24px;
+          text-align: center;
+          color: #1e293b;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 700;
+      }
+
+      /* Content styles */
+      .content {
+          padding: 32px 24px;
+          text-align: left;
+      }
+
+      .title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 24px;
+          line-height: 1.4;
+      }
+
+      .detail-row {
+          margin-bottom: 16px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #e2e8f0;
+      }
+
+      .detail-label {
+          font-weight: 600;
+          color: #475569;
+          margin-right: 8px;
+      }
+
+      .detail-value {
+          color: #1e293b;
+      }
+
+      /* Button styles */
+      .button {
+          display: inline-block;
+          background-color: #eb6314;
+          color: #ffffff !important;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 600;
+          margin-top: 24px;
+          text-align: center;
+          transition: background-color 0.2s;
+      }
+
+      .button:hover {
+          background-color:rgb(243, 105, 25);
+      }
+
+      /* Footer styles */
+      .footer {
+          text-align: center;
+          padding: 24px;
+          color: #64748b;
+          font-size: 12px;
+          background-color: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+      }
+
+      /* Responsive styles */
+      @media only screen and (max-width: 600px) {
+          .container {
+              margin: 10px;
+              width: auto;
+          }
+
+          .content {
+              padding: 24px 16px;
+          }
+
+          .button {
+              display: block;
+              width: 100%;
+          }
+      }
+  </style>
+</head>
+<body>
+  <div class="container">
+      <div class="header">
+          EBJV PROJECT INVITE
+      </div>
+
+      <div class="content">
+          <h1 class="title"> Dear ${firstName}, <br> <br>
+We’re excited to welcome you as a member of the EBJV project: ${project.project_name}. Your involvement is key to its success.
+<br> <br>
+You can now access the project and collaborate with the team.
+<br> <br>
+Click the button below to get started:</h1>
+
+          <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+              Head to the App 
+          </a>
+      </div>
+      <div class="footer">
+        If you have any questions, feel free to reach out to us at chris.pieri@ebjv.com.au.
+        <br>
+        <br>
+          EBJV<br>
+          Australia
+      </div>
+  </div>
+</body>
+</html>
+    `
   );
-  await project_activities.create({
-    project_id: project.id,
-    user_id: userId,
-    activity_type: "Add People To Project",
-    description: `Added user(s) to project: `,
-    related_data: `${emails}`
+}
+
+// If groupId is provided, add users to the group (users_groups table)
+if (groupId) {
+  // Retrieve the current members of the group using the join table (users_groups)
+  const groupMembers = await users_groups.findAll({
+    where: { group_id: groupId },
+    attributes: ['user_id'],
   });
 
-  // If groupId is provided, add users to the group (users_groups table)
-  if (groupId) {
-    // Retrieve the current members of the group using the join table (users_groups)
-    const groupMembers = await users_groups.findAll({
-      where: { group_id: groupId },
-      attributes: ['user_id'],
-    });
+  // Extract the user IDs of the current group members
+  const groupMemberIds = groupMembers.map((member) => member.user_id);
 
-    // Extract the user IDs of the current group members
-    const groupMemberIds = groupMembers.map((member) => member.user_id);
+  // Filter out users who are already part of the group
+  const usersGroupsToAdd = contributorsToAdd.filter((user) => !groupMemberIds.includes(user.id));
 
-    // Filter out users who are already part of the group
-    const usersGroupsToAdd = contributorsToAdd.filter((user) => !groupMemberIds.includes(user.id));
-
-    // Bulk add to users_groups (only if the user is not already a member)
-    if (usersGroupsToAdd.length > 0) {
-      await users_groups.bulkCreate(
-        usersGroupsToAdd.map((user) => ({
-          user_id: user.id,
-          group_id: groupId,
-        }))
-      );
-        await project_activities.create({
-            project_id: project.id,
-            user_id: userId,
-            activity_type: "Add People To Group",
-            description: `Added user(s) to group: `,
-            related_data: `${emails}`
-          });
-    }
+  // Bulk add to users_groups (only if the user is not already a member)
+  if (usersGroupsToAdd.length > 0) {
+    await users_groups.bulkCreate(
+      usersGroupsToAdd.map((user) => ({
+        user_id: user.id,
+        group_id: groupId,
+      }))
+    );
+      await project_activities.create({
+          project_id: project.id,
+          user_id: userId,
+          activity_type: "Add People To Group",
+          description: `Added user(s) to group: `,
+          related_data: `${emails}`
+        });
   }
+}
 
-  res.status(200).json({ message: "Contributors invited successfully" });
+res.status(200).json({ message: "Contributors invited successfully" });
 } catch (error) {
-  console.error("Error inviting to project:", error);
-  res.status(500).json({ error: error.message });
+console.error("Error inviting to project:", error);
+res.status(500).json({ error: error.message });
 }
 };
 
@@ -1335,51 +1461,52 @@ try {
 };
 
 const removeContributor = async(req, res ) => {
-  const { projectId, contId } = req.params;
-  const userId = req.user.id; 
-  try{
-    const projectContributor = await users_projects.findOne({where: { user_id: contId, project_id: projectId}})
-    if(!projectContributor){
-      return res.status(404).json({ message: 'Contributor not found in the project'})
-    }
-    await projectContributor.destroy();
-
-    await project_activities.create({
-      project_id: projectId,
-      user_id: userId,
-      activity_type: "Remove Contributor",
-      description: `Removed user from project`
-    });
-  res.status(200).json({message: 'Contributor removed successfully'})
-  } catch (error){
-  res.status(500).json({ error: error.message})
+const { projectId, contId } = req.params;
+const userId = req.user.id; 
+try{
+  const projectContributor = await users_projects.findOne({where: { user_id: contId, project_id: projectId}})
+  if(!projectContributor){
+    return res.status(404).json({ message: 'Contributor not found in the project'})
   }
+  await projectContributor.destroy();
+
+  await project_activities.create({
+    project_id: projectId,
+    user_id: userId,
+    activity_type: "Remove Contributor",
+    description: `Removed a user from project`,
+  });
+  
+res.status(200).json({message: 'Contributor removed successfully'})
+} catch (error){
+res.status(500).json({ error: error.message})
+}
 }
 
 const removeFromGroup = async(req, res ) => {
-  const { projectId, contId, groupId } = req.params;
-  const userId = req.user.id; 
-  try{
-    const projectGroup = await groups.findOne({where: {id: groupId, project_id: projectId}})
-    if(!projectGroup){
-      return res.status(404).json({ message: 'Group not found in the project'})
-    }
-    const groupContributor = await users_groups.findOne({where: { user_id: contId, group_id: groupId}})
-    if(!groupContributor){
-      return res.status(404).json({ message: 'Contributor not found in the group'})
-    }
-    await groupContributor.destroy();
-
-    await project_activities.create({
-      project_id: projectId,
-      user_id: userId,
-      activity_type: "Remove from Group",
-      description: `Removed user from the group`
-    });
-  res.status(200).json({message: 'Contributor removed successfully'})
-  } catch (error){
-  res.status(500).json({ error: error.message})
+const { projectId, contId, groupId } = req.params;
+const userId = req.user.id; 
+try{
+  const projectGroup = await groups.findOne({where: {id: groupId, project_id: projectId}})
+  if(!projectGroup){
+    return res.status(404).json({ message: 'Group not found in the project'})
   }
+  const groupContributor = await users_groups.findOne({where: { user_id: contId, group_id: groupId}})
+  if(!groupContributor){
+    return res.status(404).json({ message: 'Contributor not found in the group'})
+  }
+  await groupContributor.destroy();
+
+  await project_activities.create({
+    project_id: projectId,
+    user_id: userId,
+    activity_type: "Remove from Group",
+    description: `Removed user from the group`
+  });
+res.status(200).json({message: 'Contributor removed successfully'})
+} catch (error){
+res.status(500).json({ error: error.message})
+}
 }
 
 const downloadFiles = async (req, res) => {
@@ -1629,6 +1756,46 @@ try{
 }
 };
 
+
+const updateTopic = async (req, res) => {
+  const { projectId, id } = req.params;
+  const userId = req.user.id; 
+  const {topicName, topicDesc, topicType, assigneeList, topicStatus, topicPrio, topicDue} = req.body;
+  try{
+      const project = await projects.findByPk(projectId)
+      if (!project){
+          res.status(404).json({message: "Project not found"})
+      }
+      const topic = await project_topics.findByPk(id)
+      if (!topic){
+          res.status(404).json({message: 'Topic not found'});
+      }
+      
+      await topic.update({
+        topic_name: topicName,
+        topic_description: topicDesc,
+        assignee: assigneeList,
+        topic_type: topicType,
+        topic_status: topicStatus,
+        topic_priority: topicPrio,
+        topic_dueDate: topicDue
+      })
+      
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: "Topic Updated",
+        description: `Updated Topic: `,
+        related_data: `${topic.topic_name}`
+      })
+      
+  res.status(200).json({message: 'Topic updated'});
+} catch (error){
+  console.error("Error finding project");
+  res.status(500).json({error: error.message});
+}
+}
+
 module.exports = {
 getAllprojects, getProjectById,
 createProject, updateProject, deleteProject,
@@ -1638,7 +1805,7 @@ getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
 uploadFile, createFolder, deleteFile,
 createRelease, deleteRelease,
-createTopic, updateTopic, deleteTopic,
+createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
 createGroup, deleteGroup, renameGroup, 
 getGroupContributors, inviteToProject, inviteToGroup, removeContributor, removeFromGroup,
