@@ -16,7 +16,9 @@ module.exports = {
         references: {
           model: 'users', 
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       project_id: {
         type: Sequelize.INTEGER,
@@ -24,7 +26,9 @@ module.exports = {
         references: {
           model: 'projects', 
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       createdAt: {
         allowNull: false,

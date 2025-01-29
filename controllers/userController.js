@@ -22,7 +22,7 @@ const getUsers = async (req, res) => {
           attributes: ['id', 'project_name']
         },
       ],
-      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'username', 'email']
     });
     res.status(200).json(user);
   } catch (error) {
@@ -46,7 +46,7 @@ const getUserById = async (req, res) => {
         },
  
       ],
-      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email', 'password']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'username', 'email', 'password']
     });
     if (user) {
       res.status(200).json(user);
@@ -76,7 +76,7 @@ const getCurrentUser = async (req, res) => {
           attributes: ['role_name', 'role_description'], 
         },
       ],
-      attributes: ['id', 'first_name', 'last_name', 'employer', 'sex', 'username', 'email']
+      attributes: ['id', 'first_name', 'last_name', 'employer', 'username', 'email']
     });
 
     if (user) {
@@ -91,7 +91,6 @@ const getCurrentUser = async (req, res) => {
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
-        // sex: user.sex,
         username: user.username,
         email: user.email,
         roles: rolesWithPermissions,
@@ -406,17 +405,14 @@ const refresh = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-    
-    
   const id = parseInt(req.params.id);
-  const { first_name, last_name, sex, username, email, password, role_name} = req.body;
+  const { first_name, last_name, username, email, password, role_name} = req.body;
   try {
     const user = await users.findByPk(id);
 
     if (user) {
       user.first_name = first_name;
       user.last_name = last_name;
-      user.sex = sex;
       user.username = username;
       user.email = email;
       if (password) {

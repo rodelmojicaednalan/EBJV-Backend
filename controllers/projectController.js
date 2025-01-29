@@ -70,127 +70,133 @@ return `${year}-${month}-${day}`;
 };  
 
 const getProjectById = async (req, res) => {
-const { id } = req.params;
-try {
-    const project = await projects.findByPk(id, {
-        include: [
-            {
-                model: users,
-                as: 'owner',
-                attributes: ['id', 'first_name', 'last_name']
-            },
-            {
-                model: project_views,
-                attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
-            },
-            {
-                model: project_releases
-            }
-        ]
-    });
-
-    if (project) {
-       const formattedStartDate = project.start_date ? formatDateToInput(project.start_date) : null;
-       const formattedEndDate = project.end_date ? formatDateToInput(project.end_date) : null;
-
-        // Parse the JSON array of file names
-        const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
-        const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
-
-        // Fetch project activities for this project
-        const activities = await project_activities.findAll({
-            where: { project_id: id },
-            attributes: ['user_id', 'related_data'], // Include only the necessary fields
-            include: [
-                {
-                    model: users,
-                    as: 'activityUser', // Assuming there's an association to fetch user info
-                    attributes: ['id', 'first_name', 'last_name']
-                }
-            ]
-        });
-
-        // Attach file sizes and owners to each file
-        const filesWithDetails = files.map((fileName) => {
-            const filePath = path.join(uploadsDir, fileName);
-            let fileSize, fileOwner;
-
-            // Get file size
-            try {
-                const stats = fs.statSync(filePath);
-                fileSize = stats.size;
-            } catch (err) {
-                console.error(`Error accessing file: ${fileName}`, err);
-                fileSize = 'File not accessible';
-            }
-
-            // Find the owner by checking related_data in activities
-            const activity = activities.find((act) =>
-               act.related_data && act.related_data.includes(fileName)
-            );
-
-            if (activity && activity.activityUser) {
-                fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
-            } else {
-                fileOwner = 'Unknown';
-            }
-
-            return {
-                fileName,
-                fileSize,
-                fileOwner
-            };
-        });
-
-        const ownerId = project.owner.id;
-
-        const projectViews = project.project_views.map((view) => ({
-            view_name: view.view_name,
-            view_description: view.view_description,
-            assigned_tags: view.assigned_tags,
-            is_owner: view.user_id === ownerId,
-        }));
-
-        const projectReleases = project.project_releases.map((release) => {
-            const releaseActivity = activities.find(
-                (act) =>
-            
-                    act.related_data.includes(release.release_name)
-            );
-
-            const releaseOwner = releaseActivity
-                ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
-                : 'Unknown';
-
-            return {
-                releaseId: release.id,
-                release_name: release.release_name,
-                total_files: release.total_files,
-                due_date: release.due_date,
-                recipients: release.recipients,
-                release_status: release.release_status,
-                release_note: release.release_note,
-                assigned_tags: release.assigned_tags,
-                createdAt: release.createdAt,
-                is_owner: release.user_id === ownerId,
-                release_owner: releaseOwner,
-            };
-        });
-        
-      res.status(200).json({
-          ...project.toJSON(),
-          start_date: formattedStartDate,
-          end_date: formattedEndDate,
-          files: filesWithDetails,
-          project_views: projectViews,
-          project_releases: projectReleases
+  const { id } = req.params;
+  try {
+      const project = await projects.findByPk(id, {
+          include: [
+              {
+                  model: users,
+                  as: 'owner',
+                  attributes: ['id', 'first_name', 'last_name']
+              },
+              {
+                  model: project_views,
+                  attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
+              },
+              {
+                  model: project_releases
+              }
+          ]
       });
-    } else {
-        res.status(404).json({ error: 'Project not found' });
-    }
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+
+      if (project) {
+         const formattedStartDate = project.start_date ? formatDateToInput(project.start_date) : null;
+         const formattedEndDate = project.end_date ? formatDateToInput(project.end_date) : null;
+
+          // Parse the JSON array of file names
+          const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
+          const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
+
+          // Fetch project activities for this project
+          const activities = await project_activities.findAll({
+              where: { project_id: id },
+              attributes: ['user_id', 'related_data'], // Include only the necessary fields
+              include: [
+                  {
+                      model: users,
+                      as: 'activityUser', // Assuming there's an association to fetch user info
+                      attributes: ['id', 'first_name', 'last_name']
+                  }
+              ]
+          });
+
+          // Attach file sizes and owners to each file
+          const filesWithDetails = files.map((fileName) => {
+              const filePath = path.join(uploadsDir, fileName);
+              let fileSize, fileOwner, fileCreationTime, fileLastAccessed;
+
+              // Get file size
+              try {
+                  const stats = fs.statSync(filePath);
+                  fileSize = stats.size;
+                  fileCreationTime = stats.ctime;
+                  fileLastModified = stats.mtime;
+                  fileLastAccessed = stats.atime;
+              } catch (err) {
+                  console.error(`Error accessing file: ${fileName}`, err);
+                  fileSize = 'File not accessible';
+              }
+
+              // Find the owner by checking related_data in activities
+              const activity = activities.find((act) =>
+                 act.related_data && act.related_data.includes(fileName)
+              );
+
+              if (activity && activity.activityUser) {
+                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
+              } else {
+                  fileOwner = 'Unknown';
+              }
+
+              return {
+                  fileName,
+                  fileSize,
+                  fileCreationTime,
+                  fileLastModified,
+                  fileLastAccessed,
+                  fileOwner
+              };
+          });
+
+          const ownerId = project.owner.id;
+
+          const projectViews = project.project_views.map((view) => ({
+              view_name: view.view_name,
+              view_description: view.view_description,
+              assigned_tags: view.assigned_tags,
+              is_owner: view.user_id === ownerId,
+          }));
+
+          const projectReleases = project.project_releases.map((release) => {
+              const releaseActivity = activities.find(
+                  (act) =>
+              
+                      act.related_data.includes(release.release_name)
+              );
+
+              const releaseOwner = releaseActivity
+                  ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
+                  : 'Unknown';
+
+              return {
+                  releaseId: release.id,
+                  release_name: release.release_name,
+                  total_files: release.total_files,
+                  due_date: release.due_date,
+                  recipients: release.recipients,
+                  release_status: release.release_status,
+                  release_note: release.release_note,
+                  assigned_tags: release.assigned_tags,
+                  createdAt: release.createdAt,
+                  is_owner: release.user_id === ownerId,
+                  release_owner: releaseOwner,
+              };
+          });
+          
+        res.status(200).json({
+            ...project.toJSON(),
+            start_date: formattedStartDate,
+            end_date: formattedEndDate,
+            files: filesWithDetails,
+            project_views: projectViews,
+            project_releases: projectReleases
+        });
+      } else {
+          res.status(404).json({ error: 'Project not found' });
+      }
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
 };
 
 const getProjectActivity = async (req, res) => {
@@ -704,6 +710,7 @@ const uploadFile = async (req,res) => {
   res.status(500).json({error: "Upload Failed", details: error.message})
   }
 };
+
 
 const createFolder = async (req,res) => {
     const userId = req.user.id;

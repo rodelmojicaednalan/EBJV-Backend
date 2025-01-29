@@ -10,7 +10,8 @@ module.exports = async function authorize(request, res, next) {
     const authHeader = request.headers['authorization'];
     const token = authHeader?.split(' ')[1];
 
-    if (request.path === '/login' || request.path === '/reset-password' || request.path === '/confirm-reset-password' || request.path === '/refresh' || request.path === '/uploads' ) {
+    if (request.path === '/login' || request.path === '/reset-password' || request.path === '/confirm-reset-password' || request.path === '/refresh' || request.path === '/uploads' 
+        || request.path === '/request-access')  {
         return next(); // Skip token verification for login/register routes
     }
 

@@ -14,7 +14,6 @@ module.exports = {
         {
           first_name: 'Admin',
           last_name: 'User',
-          sex: 'Male',
           username: 'admin',
           email: 'admin@gmail.com',
           password: hashedAdminPassword,
@@ -24,7 +23,6 @@ module.exports = {
         {
           first_name: 'Sample',
           last_name: 'Client',
-          sex: 'Female',
           username: 'client',
           email: 'sampleclient@email.com',
           password: hashedClientPassword,

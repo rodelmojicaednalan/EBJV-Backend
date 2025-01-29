@@ -17,10 +17,6 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      sex: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
       employer: {
         type: Sequelize.STRING,
         allowNull: true

@@ -35,8 +35,8 @@ module.exports = {
           'Release Created', 'Release Deleted', 'Topic Created', 'Topic Deleted',
           'To Do Created', 'To Do Deleted', 'Created Group', 'Added to Group', 'Invited to Project',
           'Group Deleted', 'Group Renamed', 'Add People to Project', 'Add People to Group',
-          'File Download',
-          'Comment Added', 'Status Changed'),
+          'File Download', 'Comment Added', 'Status Changed', 'Project Updated', 
+          'Remove Contributor', 'Remove from Group'),
         },
         description: {
           type: Sequelize.TEXT,

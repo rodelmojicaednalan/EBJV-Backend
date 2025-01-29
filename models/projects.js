@@ -73,22 +73,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    project_size: {
-      type: DataTypes.STRING,
-      allowNull: true 
-    },
-    project_folders: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    project_file_count: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    project_user_count: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
     start_date: {
       type: DataTypes.DATE,
       allowNull: true

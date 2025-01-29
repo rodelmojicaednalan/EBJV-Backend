@@ -1,8 +1,8 @@
 {
   "development": {
-   "username": "root",
-    "password": "",
-    "database": "ebjv-dev-db",
+   "username": "olongapobataanza_ebjv-admin",
+    "password": "sz25QEFVq{m)",
+    "database": "olongapobataanza_ebjv-dev-db",
     "host": "localhost",
     "dialect": "mysql",
     "dialectOptions": {
@@ -11,18 +11,11 @@
     "timezone": "+10:00", 
     "logging": false
   },
-  "test": {
-     "username": "reviveph_userserverdb",
-    "password": "bfYxB%uw~oPI",
-    "database": "reviveph_developmentDB",
-    "host": "localhost",
-    "dialect": "mysql",
-    "logging": false
-  },
+
   "production": {
-   "username": "reviveph_userserverdb",
-    "password": "bfYxB%uw~oPI",
-    "database": "reviveph_developmentDB",
+   "username": "olongapobataanza_ebjv-admin",
+    "password": "sz25QEFVq{m)",
+    "database": "olongapobataanza_ebjv-dev-db",
     "host": "localhost",
     "dialect": "mysql",
     "dialectOptions": {

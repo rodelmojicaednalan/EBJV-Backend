@@ -35,22 +35,6 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true
       },
-      project_size: {
-        type: Sequelize.STRING,
-        allowNull: true 
-      },
-      project_folders: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-      },
-      project_file_count: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-      },
-      project_user_count: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-      },
       start_date: {
         type: Sequelize.DATE,
         allowNull: true
