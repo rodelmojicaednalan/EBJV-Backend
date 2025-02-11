@@ -95,7 +95,7 @@ const getProjectById = async (req, res) => {
 
           // Parse the JSON array of file names
           const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
-          const uploadsDir = '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files';
+          const uploadsDir = '/home/efabcoma/ebjv.api/uploads/ifc-files';
 
           // Fetch project activities for this project
           const activities = await project_activities.findAll({
@@ -503,7 +503,7 @@ try {
 
 const deleteFiles = (files) => {
   files.forEach(file => {
-      const filePath = path.join('/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files', file);
+      const filePath = path.join('/home/efabcoma/ebjv.api/uploads/ifc-files', file);
       if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
       }
@@ -549,8 +549,8 @@ const getFiles = async (req, res) => {
   const filename = req.params.filename;
 
   const uploadsPath = path.join(
-    '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
-    'uploads/ifc-files'
+    '/home/efabcoma/ebjv.api',
+    '/uploads/ifc-files'
   );
 
   const filePath = path.join(uploadsPath, filename);
@@ -561,6 +561,46 @@ const getFiles = async (req, res) => {
       res.status(404).send({ error: 'File not found' });
     }
   });
+};
+
+
+const getAllProjectPDFs = async (req, res) => {
+  const { projectId } = req.params;
+  const uploadsPath = path.join(
+    '/home/efabcoma/ebjv.api',
+    '/uploads/ifc-files'
+  );
+  try{    
+    if(!projectId){
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    // Fetch the project and its files
+    const project = await projects.findByPk(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const files = project.project_file ? JSON.parse(project.project_file) : [];
+    if (!Array.isArray(files) || files.length === 0) {
+      return res.status(404).json({ error: "No files found in the database" });
+    }
+
+    // Validate file existence in the folder
+    const projectFolder = path.join(uploadsPath);
+    const existingPDFs = files
+      .filter((file) => file.endsWith(".pdf"))
+      .filter((file) => fs.existsSync(path.join(projectFolder, file))); // Check existence
+
+    if (existingPDFs.length === 0) {
+      return res.status(404).json({ error: "No valid PDF files found" });
+    }
+
+    return res.status(200).json({ projectId, files: existingPDFs });
+  } catch (error){
+    console.error(`Error fetching project: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch project' });
+  }
 };
 
 const getContributors = async (req, res) => {
@@ -1348,7 +1388,7 @@ You can now access the project and collaborate with the team.
 <br> <br>
 Click the button below to get started:</h1>
 
-          <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+          <a href="https://cadstream.ebjv.e-fab.com.au/" class="button">
               Head to the App 
           </a>
       </div>
@@ -1520,7 +1560,7 @@ const downloadFiles = async (req, res) => {
 const { projectId, fileName } = req.params;
 const userId = req.user.id; 
 const directory = path.join(
-  '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/',
+  '/home/efabcoma/ebjv.api/',
   'uploads/ifc-files'
 );
 
@@ -1743,7 +1783,7 @@ try{
               Approved? Head to the app to create an account.
           </p>
 
-          <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+          <a href="https://cadstream.ebjv.e-fab.com.au/" class="button">
               Head to the App
           </a>
       </div>
@@ -1807,7 +1847,7 @@ module.exports = {
 getAllprojects, getProjectById,
 createProject, updateProject, deleteProject,
 getProjectByLoggedInUser,
-getFiles,
+getFiles, getAllProjectPDFs,
 getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
 uploadFile, createFolder, deleteFile,
