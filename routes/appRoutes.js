@@ -18,6 +18,7 @@ const {ifcUpload, imageUpload} = require('../utils/multerConfig');
 // GET PROJECTS
 router.get('/projects', projectController.getAllprojects);
 
+router.get('/project/:projectId/files', projectController.getAllProjectPDFs);
 router.get('/uploads/:filename', projectController.getFiles);
 router.post('/request-access', projectController.requestAccess);
 const authorize = require('../middleware/authorizationMiddleware');

@@ -563,7 +563,6 @@ const getFiles = async (req, res) => {
   });
 };
 
-
 const getAllProjectPDFs = async (req, res) => {
   const { projectId } = req.params;
   const uploadsPath = path.join(
@@ -602,6 +601,7 @@ const getAllProjectPDFs = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch project' });
   }
 };
+
 
 const getContributors = async (req, res) => {
   try {

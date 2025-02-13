@@ -4,7 +4,7 @@ const path = require('path');
 // Set ifc file storage for multer
 const ifcStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/ifc-files/');
+    cb(null,  '/home/efabcoma/api-cadstream.ebjv/uploads/ifc-files/');
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -15,7 +15,7 @@ const ifcStorage = multer.diskStorage({
 // Set ifc file storage for multer
 const thumbnailStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  '/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/uploads/project-thumbnails/');
+    cb(null,  '/home/efabcoma/api-cadstream.ebjv/uploads/project-thumbnails/');
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);

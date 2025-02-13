@@ -132,7 +132,7 @@ const addUser = async (req, res) => {
        Username: ${username},
        Password: ${password},
        Role: ${role_name}
-       Please login to the EBJV App at https://evjbportal.olongapobataanzambalesads.com.
+       Please login to the EBJV App at https://cadstream.ebjv.e-fab.com.au/
        `,
       `
   <!DOCTYPE html>
@@ -294,7 +294,7 @@ const addUser = async (req, res) => {
              Visit the app through the link below to get started.
             </p>
   
-            <a href="https://evjbportal.olongapobataanzambalesads.com/" class="button">
+            <a href="https://cadstream.ebjv.e-fab.com.au/" class="button">
                 Head to the App
             </a>
         </div>
@@ -342,7 +342,12 @@ const login = async (req, res) => {
 
     const accessToken = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '2h' });
     const refreshToken = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    const roleName = user.roles.some(role => role.role_name === 'Admin') ? 'Admin' : 'Client';
+    // const roleName = user.roles.some(role => role.role_name === 'Admin') ? 'Admin' : 'Client';
+    const roleName = user.roles.some(role => role.role_name === 'Superadmin')
+    ? 'Superadmin'
+    : user.roles.some(role => role.role_name === 'Admin')
+    ? 'Admin'
+    : 'Client';
 
   
     setTokens(res, accessToken, refreshToken);
@@ -517,7 +522,7 @@ const resetPassword = async (req, res) => {
     });
 
     // Send reset email
-    const resetUrl = `https://v2.revivepharmacyportal.com.au/reset-password/${resetToken}`;
+    const resetUrl = `https://cadstream.ebjv.e-fab.com.au/reset-password/${resetToken}`;
     await sendEmail(user.email, 'Password Reset Request', `Please click the following link to reset your password: ${resetUrl}`);
 
     res.status(200).json({ message: 'Password reset email sent.' });
