@@ -97,7 +97,14 @@ router.post('/mass-delete-logs/', staffLogController.massDeleteLogs);
 
 router.get('/my-projects',projectController.getProjectByLoggedInUser);
 router.get('/project/:id', projectController.getProjectById);
-router.post('/create-project', ifcUpload.array('project_file'), projectController.createProject);
+// router.post('/create-project', ifcUpload.array('project_file'), projectController.createProject);
+router.post('/create-project', 
+  ifcUpload.fields([
+    { name: 'project_file', maxCount: 1 }, // Allow multiple project files
+    { name: 'properties', maxCount: 1 }    // Only one JSON file
+  ]), 
+  projectController.createProject
+);
 router.put('/update-project/:id', imageUpload.single('projectThumbnail'), projectController.updateProject);
 router.delete('/delete-project/:id', projectController.deleteProject);
 
@@ -106,7 +113,7 @@ router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
-router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 10), projectController.uploadFile)
+router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 20), projectController.uploadFile)
 // router.post('/rename-file/:projectId', projectController.renameProjectFile);
 router.post('/create-folder/:id', projectController.createFolder);
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);

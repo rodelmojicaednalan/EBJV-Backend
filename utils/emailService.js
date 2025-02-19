@@ -17,7 +17,7 @@ const sendEmail = async (to, subject, text) => {
     from: process.env.MAIL_USERNAME, // sender address
     to, // list of receivers
     subject, // Subject line
-    text, // plain text body 
+    text, // plain text body
   };
 
   try {

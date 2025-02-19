@@ -4,10 +4,10 @@ const path = require('path');
 // Set ifc file storage for multer
 const ifcStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  '/home/efabcoma/api-cadstream.ebjv/uploads/ifc-files/');
+    cb(null,  '/home/efabcoma/ebjv.api/uploads/ifc-files/');
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    cb(null, `${file.originalname}`);
   }
 });
 
@@ -15,7 +15,7 @@ const ifcStorage = multer.diskStorage({
 // Set ifc file storage for multer
 const thumbnailStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  '/home/efabcoma/api-cadstream.ebjv/uploads/project-thumbnails/');
+    cb(null,  '/home/efabcoma/ebjv.api/uploads/project-thumbnails/');
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -25,7 +25,7 @@ const thumbnailStorage = multer.diskStorage({
 
 // File filter for images/videos only
 const ifcFilter = (req, file, cb) => {
-  const allowedExtensions = /ifc|nc1|dxf|pdf/;
+  const allowedExtensions = /ifc|nc1|dxf|pdf|frag|json/;
   const extName = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
 
   if (extName) {
@@ -52,7 +52,7 @@ const imageFilter = (req, file, cb) => {
 const ifcUpload = multer({
   storage: ifcStorage,
   fileFilter: ifcFilter,
-  limits: { fileSize: 50000000 } // 50MB file size limit
+  limits: { fileSize: 100000000 } // 100MB file size limit
 });
 
 const imageUpload = multer({

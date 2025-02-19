@@ -69,6 +69,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       allowNull: true,
     },
+    properties: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
     project_thumbnail: {
       type: DataTypes.STRING,
       allowNull: true

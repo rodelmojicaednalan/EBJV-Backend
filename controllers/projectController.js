@@ -410,15 +410,26 @@ const getProjectToDos = async (req, res) => {
 const createProject = async (req, res) => {
   const { project_name, project_location } = req.body;
   const userId = req.user.id;
-  const IFCFiles = req.files && req.files.length > 0 ? req.files.map(file => file.filename) : null;
+  
+ try {
+    // Extracting files from req.files
+    const projectFile = req.files['project_file'] ? req.files['project_file'].map(file => file.filename) : null;
+    const propertiesFile = req.files['properties'] ? req.files['properties'][0].path : null;
 
-  try {
+    // Read and parse properties JSON if provided
+    let properties = null;
+    if (propertiesFile) {
+      const propertiesData = fs.readFileSync(propertiesFile, 'utf-8');
+      properties = JSON.parse(propertiesData);
+    }
+    
       const newProject = await projects.create({
-          project_name,
-          project_location,
-          user_id: userId,
-          project_file: IFCFiles
-      });
+      project_name,
+      project_location,
+      user_id: userId,
+      project_file: projectFile,
+      properties
+    });
 
       if (newProject) {
           await project_activities.create({

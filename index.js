@@ -65,9 +65,9 @@ app.get('/', function (req, res) {
                 </style>
             </head>
             <body>
-                <h1>Development Server is Running ðŸš€</h1>
+                <h1>Development Server is Running 🚀</h1>
                 <p>Welcome to the backend of your awesome project!</p>
-                <p>Stay productive and build something amazing. ðŸ’»âœ¨</p>
+                <p>Stay productive and build something amazing. 💻✨</p>
                 <p>You can login to the web application through <a href="https://cadstream.ebjv.e-fab.com.au/">here</a></p>
                 <footer>
                     <p>&copy; 2018 EBJV. Powered by <a href="https://nodejs.org" target="_blank">Node.js</a>.</p>

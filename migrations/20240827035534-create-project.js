@@ -31,6 +31,10 @@ module.exports = {
         type: Sequelize.JSON,
         allowNull: true,
       },
+      properties: {
+      type: Sequelize.JSON,
+      allowNull: true,
+    },
       project_thumbnail: {
         type: Sequelize.STRING,
         allowNull: true

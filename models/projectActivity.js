@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       ProjectActivity.belongsTo(models.users, {
         foreignKey: 'user_id', // Tracks which user performed the activity
+        as: 'activityUser'
       });
     }
   }
