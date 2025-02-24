@@ -1,8 +1,8 @@
 {
   "development": {
-   "username": "efabcoma_ebjv_db_admin",
-    "password": "G)A{4Rgn!*5z",
-    "database": "efabcoma_ebjv_database",
+   "username": "root",
+    "password": "",
+    "database": "cadstream_dev_db",
     "host": "localhost",
     "dialect": "mysql",
     "dialectOptions": {

@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'project_id',
       });      
 
+      Project.hasMany(models.project_subfolders, {
+        foreignKey: 'project_id',
+      })
+
       Project.hasMany(models.project_activities, {
         foreignKey: 'project_id'
       });

@@ -4,7 +4,9 @@ const path = require('path');
 // Set ifc file storage for multer
 const ifcStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,  '/home/efabcoma/ebjv.api/uploads/ifc-files/');
+    // cb(null,  '/home/efabcoma/ebjv.api/uploads/ifc-files/');
+    cb(null,  '/home/efabcoma/api-cadstream.ebjv/uploads/ifc-files/');
+    // cb(null,  'C:/Users/Admin/Documents/GitHub/EBJV-Backend/uploads/ifc-files');
   },
   filename: (req, file, cb) => {
     cb(null, `${file.originalname}`);

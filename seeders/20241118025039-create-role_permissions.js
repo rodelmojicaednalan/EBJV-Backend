@@ -17,6 +17,8 @@ module.exports = {
        { role_id: 2, permission_id: 6, "createdAt": new Date(), "updatedAt": new Date() },
        { role_id: 2, permission_id: 7, "createdAt": new Date(), "updatedAt": new Date() },
        { role_id: 2, permission_id: 8, "createdAt": new Date(), "updatedAt": new Date() },
+
+       { role_id: 3, permission_id: 6, "createdAt": new Date(), "updatedAt": new Date() },
       ], {});
   },
 

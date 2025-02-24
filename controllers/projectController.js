@@ -1,10 +1,12 @@
-const {projects, users, project_activities, project_views, 
+const {projects, project_subfolders, users, project_activities, project_views, 
   project_releases, project_topics, users_projects, staff_logs, roles,
   project_toDos, groups, users_groups} = require('../models');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
 const { sendEmail } = require("../utils/emailService");
+const hostedUploadPath = '/home/efabcoma/api-cadstream.ebjv/uploads/ifc-files'
+// const localUploadPath = 'C:/Users/Admin/Documents/GitHub/EBJV-Backend/uploads/ifc-files'
 //const e = require('cors');
 
 const getAllprojects = async (req, res) => {
@@ -69,6 +71,58 @@ const day = String(d.getDate() + 1).padStart(2, "0");
 return `${year}-${month}-${day}`;
 };  
 
+// Helper Function to Fetch Folder Structure
+
+const getFolderStructure = (folderPath, activities) => {
+  let structure = {
+      folderName: path.basename(folderPath),
+      folderPath: folderPath,
+      files: [],
+      subfolders: []
+  };
+
+  try {
+      const items = fs.readdirSync(folderPath); // Read folder contents
+
+      items.forEach((item) => {
+          const itemPath = path.join(folderPath, item);
+          const stats = fs.statSync(itemPath);
+
+          if (stats.isDirectory()) {
+              // Recursively fetch subfolder structure
+              structure.subfolders.push(getFolderStructure(itemPath, activities));
+          } else {
+              // Find the uploader by checking related_data in activities
+              const activity = activities.find((act) =>
+                  act.related_data && act.related_data.includes(item)
+              );
+
+              let fileOwner = 'Unknown';
+              if (activity && activity.activityUser) {
+                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
+              }
+
+              // Get file details
+              structure.files.push({
+                  fileName: item,
+                  fileSize: stats.size,
+                  fileCreationTime: stats.ctime,
+                  fileLastModified: stats.mtime,
+                  fileLastAccessed: stats.atime,
+                  fileOwner
+              });
+          }
+      });
+
+  } catch (err) {
+      console.error(`Error reading folder: ${folderPath}`, err);
+  }
+
+  return structure;
+};
+
+
+
 const getProjectById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -79,12 +133,15 @@ const getProjectById = async (req, res) => {
                   as: 'owner',
                   attributes: ['id', 'first_name', 'last_name']
               },
+              // {
+              //     model: project_views,
+              //     attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
+              // },
+              // {
+              //     model: project_releases
+              // },
               {
-                  model: project_views,
-                  attributes: ['user_id', 'view_name', 'view_description', 'assigned_tags', 'updatedAt']
-              },
-              {
-                  model: project_releases
+                model: project_subfolders
               }
           ]
       });
@@ -94,8 +151,8 @@ const getProjectById = async (req, res) => {
          const formattedEndDate = project.end_date ? formatDateToInput(project.end_date) : null;
 
           // Parse the JSON array of file names
-          const files = project.project_file ? JSON.parse(project.project_file) : []; // Assuming project_file is the column name
-          const uploadsDir = '/home/efabcoma/ebjv.api/uploads/ifc-files';
+          // const files = project.project_file ? /*JSON.parse*/(project.project_file) : []; // Assuming project_file is the column name
+          // const uploadsDir = '/home/efabcoma/ebjv.api/uploads/ifc-files';
 
           // Fetch project activities for this project
           const activities = await project_activities.findAll({
@@ -110,86 +167,55 @@ const getProjectById = async (req, res) => {
               ]
           });
 
-          // Attach file sizes and owners to each file
-          const filesWithDetails = files.map((fileName) => {
-              const filePath = path.join(uploadsDir, fileName);
-              let fileSize, fileOwner, fileCreationTime, fileLastAccessed;
+          const projectFolderPath = path.join(hostedUploadPath, project.project_name); // Root project folder
 
-              // Get file size
-              try {
-                  const stats = fs.statSync(filePath);
-                  fileSize = stats.size;
-                  fileCreationTime = stats.ctime;
-                  fileLastModified = stats.mtime;
-                  fileLastAccessed = stats.atime;
-              } catch (err) {
-                  console.error(`Error accessing file: ${fileName}`, err);
-                  fileSize = 'File not accessible';
-              }
+          // Fetch complete folder structure with uploader information
+          const folderTree = getFolderStructure(projectFolderPath, activities);
+     
 
-              // Find the owner by checking related_data in activities
-              const activity = activities.find((act) =>
-                 act.related_data && act.related_data.includes(fileName)
-              );
+          // const ownerId = project.owner.id;
 
-              if (activity && activity.activityUser) {
-                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
-              } else {
-                  fileOwner = 'Unknown';
-              }
+          // const projectViews = project.project_views.map((view) => ({
+          //     view_name: view.view_name,
+          //     view_description: view.view_description,
+          //     assigned_tags: view.assigned_tags,
+          //     is_owner: view.user_id === ownerId,
+          // }));
 
-              return {
-                  fileName,
-                  fileSize,
-                  fileCreationTime,
-                  fileLastModified,
-                  fileLastAccessed,
-                  fileOwner
-              };
-          });
-
-          const ownerId = project.owner.id;
-
-          const projectViews = project.project_views.map((view) => ({
-              view_name: view.view_name,
-              view_description: view.view_description,
-              assigned_tags: view.assigned_tags,
-              is_owner: view.user_id === ownerId,
-          }));
-
-          const projectReleases = project.project_releases.map((release) => {
-              const releaseActivity = activities.find(
-                  (act) =>
+          // const projectReleases = project.project_releases.map((release) => {
+          //     const releaseActivity = activities.find(
+          //         (act) =>
               
-                      act.related_data.includes(release.release_name)
-              );
+          //             act.related_data.includes(release.release_name)
+          //     );
 
-              const releaseOwner = releaseActivity
-                  ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
-                  : 'Unknown';
+          //     const releaseOwner = releaseActivity
+          //         ? `${releaseActivity.activityUser.first_name} ${releaseActivity.activityUser.last_name}`
+          //         : 'Unknown';
 
-              return {
-                  releaseId: release.id,
-                  release_name: release.release_name,
-                  total_files: release.total_files,
-                  due_date: release.due_date,
-                  recipients: release.recipients,
-                  release_status: release.release_status,
-                  release_note: release.release_note,
-                  assigned_tags: release.assigned_tags,
-                  createdAt: release.createdAt,
-                  is_owner: release.user_id === ownerId,
-                  release_owner: releaseOwner,
-              };
-          });
+          //     return {
+          //         releaseId: release.id,
+          //         release_name: release.release_name,
+          //         total_files: release.total_files,
+          //         due_date: release.due_date,
+          //         recipients: release.recipients,
+          //         release_status: release.release_status,
+          //         release_note: release.release_note,
+          //         assigned_tags: release.assigned_tags,
+          //         createdAt: release.createdAt,
+          //         is_owner: release.user_id === ownerId,
+          //         release_owner: releaseOwner,
+          //     };
+          // });
           
         res.status(200).json({
             ...project.toJSON(),
+            folderTree,
             start_date: formattedStartDate,
             end_date: formattedEndDate,
-            files: filesWithDetails,
-            project_views: projectViews,
-            project_releases: projectReleases
+            // files: filesWithDetails,
+            // project_views: projectViews,
+            // project_releases: projectReleases
         });
       } else {
           res.status(404).json({ error: 'Project not found' });
@@ -407,43 +433,78 @@ const getProjectToDos = async (req, res) => {
   }
 };
 
+const saveFilesRecursively = (basePath, uploadedFiles) => {
+  let savedFiles = [];
+
+  uploadedFiles.forEach((file) => {
+    const filePath = path.join(basePath, file.originalname);
+    const fileDir = path.dirname(filePath);
+
+    // Create the directory if it doesn't exist
+    if (!fs.existsSync(fileDir)) {
+      fs.mkdirSync(fileDir, { recursive: true });
+    }
+
+    // Move file to the correct directory
+    fs.renameSync(file.path, filePath);
+
+    // Store the relative path
+    savedFiles.push(path.relative(hostedUploadPath, filePath));
+  });
+
+  return savedFiles;
+};
+
 const createProject = async (req, res) => {
   const { project_name, project_location } = req.body;
   const userId = req.user.id;
-  
- try {
-    // Extracting files from req.files
-    const projectFile = req.files['project_file'] ? req.files['project_file'].map(file => file.filename) : null;
-    const propertiesFile = req.files['properties'] ? req.files['properties'][0].path : null;
 
-    // Read and parse properties JSON if provided
+  try {
+    // ✅ Create the main project folder
+    const projectFolderPath = path.join(hostedUploadPath, project_name);
+    if (!fs.existsSync(projectFolderPath)) {
+      fs.mkdirSync(projectFolderPath, { recursive: true });
+    }
+
+    // ✅ Recursively save uploaded files
+    const projectFiles = req.files['project_file']
+      ? saveFilesRecursively(projectFolderPath, req.files['project_file'])
+      : [];
+
+    // ✅ Handle properties JSON file
     let properties = null;
-    if (propertiesFile) {
-      const propertiesData = fs.readFileSync(propertiesFile, 'utf-8');
+    if (req.files['properties']?.[0]) {
+      const propertiesFilePath = path.join(projectFolderPath, req.files['properties'][0].originalname);
+      fs.renameSync(req.files['properties'][0].path, propertiesFilePath);
+
+      const propertiesData = fs.readFileSync(propertiesFilePath, 'utf-8');
       properties = JSON.parse(propertiesData);
     }
-    
-      const newProject = await projects.create({
+
+    // ✅ Create project record in database
+    const newProject = await projects.create({
       project_name,
       project_location,
       user_id: userId,
-      project_file: projectFile,
+      project_file: projectFiles,
       properties
     });
 
-      if (newProject) {
-          await project_activities.create({
-              project_id: newProject.id,
-              user_id: newProject.user_id,
-              activity_type: 'Project Created',
-              description: 'Created the project',
-              related_data: newProject.project_file
-            });
-      }
+    // ✅ Log project creation activity
+    if (newProject) {
+      await project_activities.create({
+        project_id: newProject.id,
+        user_id: userId,
+        activity_type: 'Project Created',
+        description: 'Created the project',
+        related_data: projectFiles
+      });
+    }
 
-      res.status(201).json(newProject);
+    res.status(201).json(newProject);
   } catch (error) {
-      res.status(500).json({ error: error.message });
+    console.error("Error creating project:", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -512,106 +573,163 @@ try {
 }
 };
 
-const deleteFiles = (files) => {
-  files.forEach(file => {
-      const filePath = path.join('/home/efabcoma/ebjv.api/uploads/ifc-files', file);
-      if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-      }
-  });
-};
 
+
+const deleteFolderRecursively = (folderPath) => {
+  if (fs.existsSync(folderPath)) {
+    fs.readdirSync(folderPath).forEach((file) => {
+      const curPath = path.join(folderPath, file);
+      if (fs.lstatSync(curPath).isDirectory()) {
+        // Recursively delete subdirectories
+        deleteFolderRecursively(curPath);
+      } else {
+        // Delete file
+        fs.unlinkSync(curPath);
+      }
+    });
+    // Remove empty folder
+    fs.rmdirSync(folderPath);
+  }
+};
 
 const deleteProject = async (req, res) => {
   const id = parseInt(req.params.id);
+
   try {
-    // Find the project by ID before deletion
+    // ✅ Find the project before deletion
     const project = await projects.findByPk(id);
     
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
     
-    // Parse the project media files
-    const mediaFiles = project.project_file ? JSON.parse(project.project_file) : []; 
+    // ✅ Parse project media files if any
+    const mediaFiles = project.project_file ? JSON.parse(project.project_file) : [];
 
-    // Delete the media files associated with the project
-    if (mediaFiles.length > 0) {
+    // ✅ Determine project folder path
+    const projectFolderPath = path.join(hostedUploadPath, project.project_name);
+
+    // ✅ Delete all files and folders recursively
+    if (fs.existsSync(projectFolderPath)) {
       try {
-        deleteFiles(mediaFiles); // Use your deleteFiles helper function
+        deleteFolderRecursively(projectFolderPath);
       } catch (error) {
-        return res.status(500).json({ message: 'Error deleting files', error: error.message });
+        return res.status(500).json({ message: 'Error deleting project folder', error: error.message });
       }
     }
 
-    // Now, delete the project from the database
+    // ✅ Delete project record from database
     const deleted = await projects.destroy({ where: { id } });
+
     if (deleted) {
       res.status(200).json({ message: `Project deleted with ID: ${id}` });
     } else {
       res.status(404).json({ error: 'Failed to delete project' });
     }
   } catch (error) {
+    console.error(`Error deleting project: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 };
 
+const findFileRecursively = (folderPath, fileName) => {
+  const items = fs.readdirSync(folderPath);
+
+  for (const item of items) {
+    const itemPath = path.join(folderPath, item);
+    const stat = fs.statSync(itemPath);
+
+    if (stat.isFile() && item === fileName) {
+      return itemPath; // ✅ File found, return full path
+    } else if (stat.isDirectory()) {
+      const foundFilePath = findFileRecursively(itemPath, fileName);
+      if (foundFilePath) return foundFilePath; // ✅ Stop searching once found
+    }
+  }
+  return null; // ❌ File not found
+};
+
 const getFiles = async (req, res) => {
-  const filename = req.params.filename;
+  const filename = decodeURIComponent(req.params.filename);  
 
-  const uploadsPath = path.join(
-    '/home/efabcoma/ebjv.api',
-    '/uploads/ifc-files'
-  );
+  // ✅ Start searching in the main `uploads/ifc-files` directory
+  const filePath = findFileRecursively(hostedUploadPath, filename);
 
-  const filePath = path.join(uploadsPath, filename);
+  if (!filePath) {
+    return res.status(404).json({ error: "File not found" });
+  }
 
   res.sendFile(filePath, (err) => {
     if (err) {
       console.error(`Error serving file: ${err.message}`);
-      res.status(404).send({ error: 'File not found' });
+      res.status(500).send({ error: "Error serving file" });
     }
   });
 };
 
 const getAllProjectPDFs = async (req, res) => {
-  const { projectId } = req.params;
-  const uploadsPath = path.join(
-    '/home/efabcoma/ebjv.api',
-    '/uploads/ifc-files'
-  );
-  try{    
-    if(!projectId){
-      return res.status(400).json({ error: 'Project ID is required' });
+    try {
+        const { projectId } = req.params;
+        const { folder } = req.query; // 📌 Extract folder from query (if any)
+
+        if (!projectId) {
+            return res.status(400).json({ error: "Project ID is required" });
+        }
+
+        const project = await projects.findByPk(projectId);
+        if (!project) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+
+        let projectFolder = path.join(hostedUploadPath, project.project_name);
+        if (folder) {
+            projectFolder = path.join(hostedUploadPath, decodeURIComponent(folder)); // ✅ Decode user input
+        }
+
+        if (!fs.existsSync(projectFolder)) {
+            return res.status(404).json({ error: "Folder not found" });
+        }
+
+        const getPDFFilesLevelByLevel = (directory) => {
+            let filesAtThisLevel = [];
+            let subfolders = [];
+
+            const items = fs.readdirSync(directory, { withFileTypes: true });
+
+            for (const item of items) {
+                const itemPath = path.join(directory, item.name);
+
+                if (item.isFile() && item.name.toLowerCase().endsWith(".pdf")) {
+                    const relativePath = path.relative(hostedUploadPath, itemPath);
+                    filesAtThisLevel.push(encodeURIComponent(relativePath)); // ✅ Encode file paths
+                } else if (item.isDirectory()) {
+                    subfolders.push(itemPath);
+                }
+            }
+
+            let subfolderFiles = subfolders.map((subfolder) => ({
+                folder: encodeURIComponent(path.relative(hostedUploadPath, subfolder)), // ✅ Encode folder paths
+                files: getPDFFilesLevelByLevel(subfolder), // Recurse for subfolders
+            }));
+
+            return { currentLevelFiles: filesAtThisLevel, subfolderFiles };
+        };
+
+        const allPDFs = getPDFFilesLevelByLevel(projectFolder);
+
+        if (allPDFs.currentLevelFiles.length === 0 && allPDFs.subfolderFiles.length === 0) {
+            return res.status(404).json({ error: "No valid PDF files found" });
+        }
+
+        return res.status(200).json({ projectId, files: allPDFs });
+    } catch (error) {
+        console.error(`Error fetching project PDFs: ${error.message}`);
+        res.status(500).json({ error: "Internal server error" });
     }
-
-    // Fetch the project and its files
-    const project = await projects.findByPk(projectId);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    const files = project.project_file ? JSON.parse(project.project_file) : [];
-    if (!Array.isArray(files) || files.length === 0) {
-      return res.status(404).json({ error: "No files found in the database" });
-    }
-
-    // Validate file existence in the folder
-    const projectFolder = path.join(uploadsPath);
-    const existingPDFs = files
-      .filter((file) => file.endsWith(".pdf"))
-      .filter((file) => fs.existsSync(path.join(projectFolder, file))); // Check existence
-
-    if (existingPDFs.length === 0) {
-      return res.status(404).json({ error: "No valid PDF files found" });
-    }
-
-    return res.status(200).json({ projectId, files: existingPDFs });
-  } catch (error){
-    console.error(`Error fetching project: ${error.message}`);
-    res.status(500).json({ error: 'Failed to fetch project' });
-  }
 };
+
+
+
 
 
 const getContributors = async (req, res) => {
@@ -729,87 +847,254 @@ const getContributors = async (req, res) => {
   }
 };
 
-const uploadFile = async (req,res) => {
-  try{
-      const userId = req.user.id;
-      const project = await projects.findByPk(req.params.id);
+const uploadFile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const project = await projects.findByPk(req.params.id);
+    const {folderName} = req.params;
 
-      if (!project) {
-          return res.status(404).json({ error: "Project not found" });
-        }
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
 
-      const currentFiles = project.project_file ? JSON.parse(project.project_file) : []; 
-      const newFiles = req.files ? req.files.map((file) => file.filename) : [];
-      const updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
+    const projectFolderPath = path.join(hostedUploadPath, project.project_name);
+    const targetFolder = folderName ? path.join(projectFolderPath, folderName) : projectFolderPath;
 
-      project.project_file = updatedFiles.length > 0 ? updatedFiles : null;
+    // Ensure the target folder exists
+    if (!fs.existsSync(targetFolder)) {
+      return res.status(400).json({ error: "Target folder does not exist" });
+    }
 
-      await project.save();
+    const currentFiles = project.project_file ? JSON.parse(project.project_file) : [];
+    const newFiles = req.files ? req.files.map((file) => {
+      const filePath = path.join(targetFolder, file.filename);
+      fs.renameSync(file.path, filePath); // Move uploaded file
+      return file.filename;
+    }) : [];
 
-      if(newFiles.length > 0){
-          await project_activities.create({
-              project_id: project.id,
-              user_id: userId,
-              activity_type: 'File Uploaded',
-              description: `Uploaded ${newFiles.length} file(s): `,
-              related_data: `${newFiles.join(", ")}`
-            });
-      }
-  res.status(200).json({message: "Upload successful"})
-  } catch(error){
-      console.error("File upload error:", error);
-  res.status(500).json({error: "Upload Failed", details: error.message})
+    const updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
+
+    project.project_file = updatedFiles.length > 0 ? (updatedFiles) : null;
+
+    if (req.files['properties']?.[0]) {
+      const propertiesFilePath = path.join(targetFolder, req.files['properties'][0].originalname);
+      fs.renameSync(req.files['properties'][0].path, propertiesFilePath);
+
+      const propertiesData = fs.readFileSync(propertiesFilePath, 'utf-8');
+      project.properties = JSON.parse(propertiesData);
+    }
+
+    await project.save();
+
+    if (newFiles.length > 0) {
+      await project_activities.create({
+        project_id: project.id,
+        user_id: userId,
+        activity_type: 'File Uploaded',
+        description: `Uploaded ${newFiles.length} file(s):`,
+        related_data: newFiles.join(", ")
+      });
+    }
+
+    res.status(200).json({ message: "Upload successful" });
+  } catch (error) {
+    console.error("File upload error:", error);
+    res.status(500).json({ error: "Upload Failed", details: error.message });
   }
 };
 
 
-const createFolder = async (req,res) => {
-    const userId = req.user.id;
-    const project = await projects.findByPk(req.params.id);
-    try{
-        
-        
-      res.status(200).json({message: "Folder created successfully"})      
-    } catch (error){
-      res.status(500).json({error: error.message});
-    }
+
+const createFolder = async (req, res) => {
+  const userId = req.user.id;
+  try {
+      const project = await projects.findByPk(req.params.id);
+      if (!project) {
+          return res.status(404).json({ error: "Project not found" });
+      }
+
+      const folderName = req.body.folder_name;
+      if (!folderName) {
+          return res.status(400).json({ error: "Folder name is required" });
+      }
+
+      const projectFolderPath = path.join(hostedUploadPath, project.project_name);
+      const newFolderPath = path.join(projectFolderPath, folderName);
+
+      // Ensure the project folder exists
+      if (!fs.existsSync(projectFolderPath)) {
+          fs.mkdirSync(projectFolderPath, { recursive: true });
+      }
+
+      // Create the subfolder if it doesn't exist
+      if (!fs.existsSync(newFolderPath)) {
+          fs.mkdirSync(newFolderPath);
+      } else {
+          return res.status(400).json({ error: "Folder already exists" });
+      }
+
+      // Save folder info in database
+      const createSubfolder = await project_subfolders.create({
+          project_id: project.id,
+          folder_name: folderName,
+          folder_path: newFolderPath,
+          created_by: userId
+      });
+
+      if (createSubfolder){
+        await project_activities.create({
+          project_id: project.id,
+          user_id: userId,
+          activity_type: "Folder Creation",
+          description: `Created Project Sub-folder: `,
+          related_data: `${folderName}`
+        });
+      }
+      res.status(200).json({ message: "Folder created successfully" });
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
 };
+
+
+const deleteFolders = async (req, res) => {
+  const userId = req.user.id;
+  const projectId = req.params.userId;
+  try {
+    const project = await projects.findByPk(projectId);
+    if(!project){
+      return res.status(404).json({error: "Project Not found"});
+    }
+    const user = await users.findByPk(userId);
+    if (!user){
+      return res.status(401).json({error: "User not found"});
+    }
+
+    const { folderPaths } = req.body; // Expecting an array of folder paths
+
+    if (!folderPaths || !Array.isArray(folderPaths) || folderPaths.length === 0) {
+      return res.status(400).json({ error: "Invalid folder paths provided" });
+    }
+
+    folderPaths.forEach((folderPath) => {
+      const fullPath = path.join(hostedUploadPath, folderPath); // Adjust base folder
+      deleteFolderRecursively(fullPath);
+    });
+
+    res.status(200).json({ message: "Folders deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting folders:", error);
+    res.status(500).json({ error: "Failed to delete folders", details: error.message });
+  }
+};
+
+
+const renameFolder = async (req, res) => {
+  const userId = req.user.id;
+  const { projectId, oldFolderPath, newFolderName } = req.params;
+  try {
+    const project = await projects.findByPk(projectId);
+    if(!project){
+      return res.status(404).json({error: "Project Not found"});
+    }
+    const user = await users.findByPk(userId);
+    if (!user){
+      return res.status(401).json({error: "User not found"});
+    }
+
+    if (!oldFolderPath || !newFolderName) {
+      return res.status(400).json({ error: "Missing folder path or new name" });
+    }
+
+    const oldFullPath = path.join(hostedUploadPath, oldFolderPath);
+    const newFullPath = path.join(path.dirname(oldFullPath), newFolderName);
+
+    // Check if new folder name already exists
+    try {
+      fs.access(newFullPath);
+      return res.status(400).json({ error: "A folder with this name already exists" });
+    } catch (err) {
+      // Folder doesn't exist, safe to rename
+    }
+
+    fs.rename(oldFullPath, newFullPath);
+
+    res.status(200).json({ message: "Folder renamed successfully", newPath: newFullPath });
+  } catch (error) {
+    console.error("Error renaming folder:", error);
+    res.status(500).json({ error: "Failed to rename folder", details: error.message });
+  }
+};
+
 
 const deleteFile = async (req, res) => {
   const projectId = req.params.projectId;
   const fileName = req.params.id; // Pass the file name as a param
-  const userId = req.user.id; 
-  try {
-      const project = await projects.findByPk(projectId);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-  
-      let projectFiles = project.project_file ? JSON.parse(project.project_file) : []; 
-      if (typeof projectFiles === "string") {
-        projectFiles = JSON.parse(projectFiles); 
-      }
-  
-      const updatedFiles = projectFiles.filter((file) => file !== fileName);
-  
-      await project.update({ project_file: updatedFiles });
-      
-      deleteFiles([fileName]);
+  const userId = req.user.id;
 
-      await project_activities.create({
-          project_id: project.id,
-          user_id: userId,
-          activity_type: "File Deleted",
-          description: `Deleted file: `,
-          related_data: `${fileName}`
-        });
+  try {
+    const project = await projects.findByPk(projectId);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    let projectFiles = project.project_file ? JSON.parse(project.project_file) : []; 
+    if (typeof projectFiles === "string") {
+      projectFiles = JSON.parse(projectFiles); 
+    }
+
+    const updatedFiles = projectFiles.filter((file) => file !== fileName);
+    await project.update({ project_file: updatedFiles });
+
+    deleteFiles([fileName], path.join(hostedUploadPath, project.project_name)); // ✅ Now searches recursively
+
+    await project_activities.create({
+      project_id: project.id,
+      user_id: userId,
+      activity_type: "File Deleted",
+      description: `Deleted file: `,
+      related_data: `${fileName}`
+    });
 
     res.status(200).json({ message: "File removed successfully" });
   } catch (error) {
     console.error("Error deleting file:", error);
-    res.status(500).json({ error: "File removal failed" });
+    res.status(500).json({ error: error.message });
   }
 };
+
+
+const deleteFiles = (files, currentPath = hostedUploadPath) => {
+  files.forEach((fileName) => {
+    const searchAndDelete = (folderPath) => {
+      const items = fs.readdirSync(folderPath);
+
+      for (const item of items) {
+        const itemPath = path.join(folderPath, item);
+        const stat = fs.statSync(itemPath);
+
+        if (stat.isFile() && item === fileName) {
+          fs.unlinkSync(itemPath); // ✅ Delete file
+          console.log(`Deleted: ${itemPath}`);
+          return true;
+        } else if (stat.isDirectory()) {
+          if (searchAndDelete(itemPath)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    console.log(`Searching for ${fileName}...`);
+    const found = searchAndDelete(currentPath);
+
+    if (!found) {
+      console.warn(`File ${fileName} not found in ${currentPath}`);
+    }
+  });
+};
+
 
 const createRelease = async(req, res) => {
   const projectId = req.params.projectId;
@@ -1570,14 +1855,14 @@ res.status(500).json({ error: error.message})
 const downloadFiles = async (req, res) => {
 const { projectId, fileName } = req.params;
 const userId = req.user.id; 
-const directory = path.join(
-  '/home/efabcoma/ebjv.api/',
-  'uploads/ifc-files'
-);
+// const directory = path.join(
+//   '/home/efabcoma/ebjv.api/',
+//   'uploads/ifc-files'
+// );
 
 try {
   // Construct the full file path
-  const filePath = path.join(directory, fileName);
+  const filePath = path.join(hostedUploadPath, fileName);
   const project = await projects.findByPk(projectId);
 
   // Validate if project exists
@@ -1854,6 +2139,7 @@ const updateTopic = async (req, res) => {
 }
 }
 
+
 module.exports = {
 getAllprojects, getProjectById,
 createProject, updateProject, deleteProject,
@@ -1861,13 +2147,14 @@ getProjectByLoggedInUser,
 getFiles, getAllProjectPDFs,
 getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
-uploadFile, createFolder, deleteFile,
+uploadFile, createFolder, deleteFolders, deleteFile,
 createRelease, deleteRelease,
 createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
 createGroup, deleteGroup, renameGroup, 
 getGroupContributors, inviteToProject, inviteToGroup, removeContributor, removeFromGroup,
-downloadFiles, requestAccess
+downloadFiles, requestAccess,
+getFolderStructure
 
 };
 

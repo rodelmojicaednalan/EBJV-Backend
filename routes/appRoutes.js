@@ -114,6 +114,8 @@ router.get('/project-contributors/:projectId', projectController.getContributors
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
 router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 20), projectController.uploadFile)
+router.post('/upload-ifc-files/:id/:folderName', ifcUpload.array('project_file', 20), projectController.uploadFile)
+
 // router.post('/rename-file/:projectId', projectController.renameProjectFile);
 router.post('/create-folder/:id', projectController.createFolder);
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
