@@ -113,11 +113,22 @@ router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
-router.post('/upload-ifc-files/:id', ifcUpload.array('project_file', 20), projectController.uploadFile)
-router.post('/upload-ifc-files/:id/:folderName', ifcUpload.array('project_file', 20), projectController.uploadFile)
+router.post('/upload-pdf-files/:id', ifcUpload.fields([{name: 'project_file', maxCOunt: 20}]), projectController.uploadFile)
+router.post('/upload-pdf-files/:id/:folderName', ifcUpload.fields([{name: 'project_file', maxCOunt: 20}]), projectController.uploadFile)
+
+router.post('/upload-ifc-files/:id',  ifcUpload.fields([
+    { name: 'project_file', maxCount: 20 }, // Allow multiple project files
+    { name: 'properties', maxCount: 20 }    // Only one JSON file
+  ]), projectController.uploadFile);
+router.post('/upload-ifc-files/:id/:folderName', ifcUpload.fields([
+    { name: 'project_file', maxCount: 20 }, // Allow multiple project files
+    { name: 'properties', maxCount: 20 }    // Only one JSON file
+  ]), projectController.uploadFile);
 
 // router.post('/rename-file/:projectId', projectController.renameProjectFile);
 router.post('/create-folder/:id', projectController.createFolder);
+router.post('/delete-folders/:id', projectController.deleteFolders);
+router.post('/rename-folder/:projectId/:oldFolderPath/:newFolderName', projectController.renameFolder);
 router.delete('/delete-file/:projectId/:id', projectController.deleteFile);
 
 router.post('/create-release/:projectId', projectController.createRelease);

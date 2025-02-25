@@ -866,16 +866,17 @@ const uploadFile = async (req, res) => {
     }
 
     const currentFiles = project.project_file ? JSON.parse(project.project_file) : [];
-    const newFiles = req.files ? req.files.map((file) => {
+    const newFiles = req.files['project_file'] ? req.files['project_file'].map((file) => {
       const filePath = path.join(targetFolder, file.filename);
-      fs.renameSync(file.path, filePath); // Move uploaded file
+      fs.renameSync(file.path, filePath);
       return file.filename;
     }) : [];
+
 
     const updatedFiles = [...new Set([...currentFiles, ...newFiles])]; // Deduplicate
 
     project.project_file = updatedFiles.length > 0 ? (updatedFiles) : null;
-
+    
     if (req.files['properties']?.[0]) {
       const propertiesFilePath = path.join(targetFolder, req.files['properties'][0].originalname);
       fs.renameSync(req.files['properties'][0].path, propertiesFilePath);
@@ -956,10 +957,9 @@ const createFolder = async (req, res) => {
   }
 };
 
-
 const deleteFolders = async (req, res) => {
   const userId = req.user.id;
-  const projectId = req.params.userId;
+  const projectId = req.params.id;
   try {
     const project = await projects.findByPk(projectId);
     if(!project){
@@ -988,7 +988,6 @@ const deleteFolders = async (req, res) => {
   }
 };
 
-
 const renameFolder = async (req, res) => {
   const userId = req.user.id;
   const { projectId, oldFolderPath, newFolderName } = req.params;
@@ -1006,18 +1005,15 @@ const renameFolder = async (req, res) => {
       return res.status(400).json({ error: "Missing folder path or new name" });
     }
 
-    const oldFullPath = path.join(hostedUploadPath, oldFolderPath);
-    const newFullPath = path.join(path.dirname(oldFullPath), newFolderName);
+    const oldFullPath = path.join(hostedUploadPath, decodeURIComponent(oldFolderPath)); // Ensure decoding
+    const newFullPath = path.join(path.dirname(oldFullPath), decodeURIComponent(newFolderName));
 
     // Check if new folder name already exists
-    try {
-      fs.access(newFullPath);
+      if (fs.existsSync(newFullPath)) {
       return res.status(400).json({ error: "A folder with this name already exists" });
-    } catch (err) {
-      // Folder doesn't exist, safe to rename
     }
 
-    fs.rename(oldFullPath, newFullPath);
+    fs.renameSync(oldFullPath, newFullPath);
 
     res.status(200).json({ message: "Folder renamed successfully", newPath: newFullPath });
   } catch (error) {
@@ -1025,7 +1021,6 @@ const renameFolder = async (req, res) => {
     res.status(500).json({ error: "Failed to rename folder", details: error.message });
   }
 };
-
 
 const deleteFile = async (req, res) => {
   const projectId = req.params.projectId;
@@ -2147,7 +2142,7 @@ getProjectByLoggedInUser,
 getFiles, getAllProjectPDFs,
 getProjectActivity, getProjectTopics,
 getContributors, getProjectToDos,
-uploadFile, createFolder, deleteFolders, deleteFile,
+uploadFile, createFolder, deleteFolders, renameFolder, deleteFile,
 createRelease, deleteRelease,
 createTopic, deleteTopic,
 createToDo, updateToDo, deleteToDo,
