@@ -113,16 +113,16 @@ router.get('/project-topics/:id', projectController.getProjectTopics);
 router.get('/project-contributors/:projectId', projectController.getContributors);
 router.get('/project-toDo/:id', projectController.getProjectToDos);
 
-router.post('/upload-pdf-files/:id', ifcUpload.fields([{name: 'project_file', maxCOunt: 20}]), projectController.uploadFile)
-router.post('/upload-pdf-files/:id/:folderName', ifcUpload.fields([{name: 'project_file', maxCOunt: 20}]), projectController.uploadFile)
+router.post('/upload-pdf-files/:id', ifcUpload.fields([{name: 'project_file' }]), projectController.uploadFile)
+router.post('/upload-pdf-files/:id/:folderName', ifcUpload.fields([{name: 'project_file'}]), projectController.uploadFile)
 
 router.post('/upload-ifc-files/:id',  ifcUpload.fields([
-    { name: 'project_file', maxCount: 20 }, // Allow multiple project files
-    { name: 'properties', maxCount: 20 }    // Only one JSON file
+    { name: 'project_file', maxCount: 30 }, // Allow multiple project files
+    { name: 'properties', maxCount: 30 }    // Only one JSON file
   ]), projectController.uploadFile);
 router.post('/upload-ifc-files/:id/:folderName', ifcUpload.fields([
-    { name: 'project_file', maxCount: 20 }, // Allow multiple project files
-    { name: 'properties', maxCount: 20 }    // Only one JSON file
+    { name: 'project_file', maxCount: 30 }, // Allow multiple project files
+    { name: 'properties', maxCount: 30 }    // Only one JSON file
   ]), projectController.uploadFile);
 
 // router.post('/rename-file/:projectId', projectController.renameProjectFile);
@@ -154,35 +154,5 @@ router.delete('/remove-groupMember/:projectId/:contId/:groupId', projectControll
 
 router.get('/download-file/:projectId/:fileName', projectController.downloadFiles);
 
-
-
-// // Upload route
-// router.get(
-//   '/uploads',
-//   (req, res, next) => {
-//     cors();
-//     next();
-//   },
-//   async function (req, res) {
-//     try {
-//       const apiUrl = `/home/olongapobataanza/ebjv-api.olongapobataanzambalesads.com/`;
-//       const headers = {
-//         Accept: 'application/json',
-//         'Content-Type': 'application/json',
-//       };
-//       const apiResponse = await fetch(apiUrl, { headers });
-
-//       if (!apiResponse.ok) {
-//         throw new Error(`HTTP error! Status: ${apiResponse.status}`);
-//       }
-
-//       const data = await apiResponse.json();
-//       res.status(200).send({ data });
-//     } catch (error) {
-//       console.error('Error:', error.message);
-//       res.status(500).json({ error: 'Something went wrong.' });
-//     }
-//   }
-// );
 
 module.exports = router;

@@ -73,52 +73,61 @@ return `${year}-${month}-${day}`;
 
 // Helper Function to Fetch Folder Structure
 
-const getFolderStructure = (folderPath, activities) => {
-  let structure = {
-      folderName: path.basename(folderPath),
-      folderPath: folderPath,
-      files: [],
-      subfolders: []
-  };
+const getFolderStructure = (folderPath, activities, batchSize = 100) => {
+    let structure = {
+        folderName: path.basename(folderPath),
+        folderPath: folderPath,
+        files: [],
+        subfolders: []
+    };
 
-  try {
-      const items = fs.readdirSync(folderPath); // Read folder contents
+    try {
+        const items = fs.readdirSync(folderPath); // Read folder contents
 
-      items.forEach((item) => {
-          const itemPath = path.join(folderPath, item);
-          const stats = fs.statSync(itemPath);
+        let files = [];
+        let folders = [];
 
-          if (stats.isDirectory()) {
-              // Recursively fetch subfolder structure
-              structure.subfolders.push(getFolderStructure(itemPath, activities));
-          } else {
-              // Find the uploader by checking related_data in activities
-              const activity = activities.find((act) =>
-                  act.related_data && act.related_data.includes(item)
-              );
+        // Separate files and folders
+        items.forEach((item) => {
+            const itemPath = path.join(folderPath, item);
+            const stats = fs.statSync(itemPath);
+            if (stats.isDirectory()) {
+                folders.push(itemPath);
+            } else {
+                files.push({
+                    fileName: item,
+                    fileSize: stats.size,
+                    fileCreationTime: stats.ctime,
+                    fileLastModified: stats.mtime,
+                    fileLastAccessed: stats.atime,
+                    fileOwner: getFileOwner(item, activities),
+                });
+            }
+        });
 
-              let fileOwner = 'Unknown';
-              if (activity && activity.activityUser) {
-                  fileOwner = `${activity.activityUser.first_name} ${activity.activityUser.last_name}`;
-              }
+        // ✅ Process files in batches to avoid overload
+        for (let i = 0; i < files.length; i += batchSize) {
+            structure.files.push(...files.slice(i, i + batchSize));
+        }
 
-              // Get file details
-              structure.files.push({
-                  fileName: item,
-                  fileSize: stats.size,
-                  fileCreationTime: stats.ctime,
-                  fileLastModified: stats.mtime,
-                  fileLastAccessed: stats.atime,
-                  fileOwner
-              });
-          }
-      });
+        // ✅ Process subfolders recursively
+        folders.forEach((folder) => {
+            structure.subfolders.push(getFolderStructure(folder, activities, batchSize));
+        });
 
-  } catch (err) {
-      console.error(`Error reading folder: ${folderPath}`, err);
-  }
+    } catch (err) {
+        console.error(`Error reading folder: ${folderPath}`, err);
+    }
 
-  return structure;
+    return structure;
+};
+
+// ✅ Helper function to get file owner from activities
+const getFileOwner = (fileName, activities) => {
+    const activity = activities.find((act) => act.related_data && act.related_data.includes(fileName));
+    return activity && activity.activityUser
+        ? `${activity.activityUser.first_name} ${activity.activityUser.last_name}`
+        : 'Unknown';
 };
 
 
@@ -1848,54 +1857,53 @@ res.status(500).json({ error: error.message})
 }
 
 const downloadFiles = async (req, res) => {
-const { projectId, fileName } = req.params;
-const userId = req.user.id; 
-// const directory = path.join(
-//   '/home/efabcoma/ebjv.api/',
-//   'uploads/ifc-files'
-// );
+  const { projectId, fileName } = req.params;
+  const userId = req.user.id;
 
-try {
-  // Construct the full file path
-  const filePath = path.join(hostedUploadPath, fileName);
-  const project = await projects.findByPk(projectId);
+  try {
+    const project = await projects.findByPk(projectId);
+    if (!project) return res.status(404).json({ message: "Project Not Found" });
 
-  // Validate if project exists
-  if (!project) {
-    return res.status(404).json({ message: 'Project Not Found' });
-  }
+    if (!fileName) return res.status(400).json({ message: "File Name is required" });
 
-  // Validate if file name is provided
-  if (!fileName) {
-    return res.status(400).json({ message: 'File Name is required' });
-  }
+    // First, check in the main directory
+    let filePath = path.join(hostedUploadPath, fileName);
 
-  // Check if the file exists in the directory
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: 'File Not Found' });
-  }
-
-  // Stream the file to the client for download
-  res.download(filePath, fileName, (err) => {
-    if (err) {
-      console.error("Error sending file:", err);
-      res.status(500).json({ message: "Error downloading file", error: err.message });
-    } else {
-      console.log(`File "${fileName}" downloaded successfully.`);
+    // If file doesn't exist, search recursively
+    if (!fs.existsSync(filePath)) {
+      console.log(`File not found in main directory. Searching recursively...`);
+      filePath = findFileRecursively(hostedUploadPath, fileName);
     }
-  });
-  await project_activities.create({
-    project_id: project.id,
-    user_id: userId,
-    activity_type: "File Download",
-    description: `Downloaded file: `,
-    related_data: `${fileName}`
-  });
-} catch (error) {
-  console.error("Error downloading file:", error);
-  res.status(500).json({ error: error.message });
-}
+
+    // If still not found, return 404
+    if (!filePath) {
+      return res.status(404).json({ message: "File Not Found" });
+    }
+
+    // Stream the file for download
+    res.download(filePath, fileName, (err) => {
+      if (err) {
+        console.error("Error sending file:", err);
+        return res.status(500).json({ message: "Error downloading file", error: err.message });
+      }
+      console.log(`✅ File "${fileName}" downloaded successfully.`);
+    });
+
+    // Log the download activity
+    await project_activities.create({
+      project_id: project.id,
+      user_id: userId,
+      activity_type: "File Download",
+      description: `Downloaded file: ${fileName}`,
+      related_data: fileName,
+    });
+
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
+
 
 const requestAccess = async (req,res) => {
 const { firstName, lastName, email, project, contact, reason } = req.body;

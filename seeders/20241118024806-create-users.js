@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs'); // Import bcrypt
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Hash the passwords before inserting
-    const hashedSuperAdminPassword = await bcrypt.hash('superadmin', 10);
+    const hashedSuperAdminPassword = await bcrypt.hash('zKr4!X=134', 10);
     const hashedAdminPassword = await bcrypt.hash('admin', 10);
     const hashedClientPassword = await bcrypt.hash('password', 10);
 
