@@ -517,6 +517,19 @@ const createProject = async (req, res) => {
   }
 };
 
+const renameProjectFolderRecursively = (oldPath, newPath) => {
+  if (!fs.existsSync(oldPath)) return;
+
+  // Ensure the new path does not already exist
+  if (fs.existsSync(newPath)) {
+    console.error("Folder with new name already exists:", newPath);
+    return;
+  }
+
+  fs.renameSync(oldPath, newPath);
+  console.log(`Folder renamed: ${oldPath} → ${newPath}`);
+};
+
 const updateProject = async (req, res) => {
 const userId = req.user.id;
 try {
@@ -529,10 +542,16 @@ try {
 
   // Store the changes for activity logging
   const changes = [];
+  let projectFolderRenamed = false;
+  let oldProjectFolderPath, newProjectFolderPath;
 
   if (projectName && projectName !== project.project_name) {
     changes.push(`Project Name: ${project.project_name} → ${projectName}`);
+    oldProjectFolderPath = path.join(hostedUploadPath, project.project_name);
+    newProjectFolderPath = path.join(hostedUploadPath, projectName);
+
     project.project_name = projectName;
+    projectFolderRenamed = true;
   }
 
   const formattedStartDate = project.start_date ? formatDateToInput(project.start_date) : null;
@@ -563,6 +582,11 @@ try {
     project.project_thumbnail = req.file.filename; // Save new thumbnail filename
   }
 
+   // Rename the project folder if the name has changed
+   if (projectFolderRenamed) {
+    renameProjectFolderRecursively(oldProjectFolderPath, newProjectFolderPath);
+  }
+
   // Log the activity if there are any changes
   if (changes.length > 0) {
     await project_activities.create({
@@ -581,7 +605,6 @@ try {
   res.status(500).json({ message: "Error updating project", error: error.message });
 }
 };
-
 
 
 const deleteFolderRecursively = (folderPath) => {
